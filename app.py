@@ -2,8 +2,8 @@ import os
 import pty
 import select
 import subprocess
-from flask import Flask, send_from_directory
-from flask_socketio import SocketIO, emit, request
+from flask import Flask, send_from_directory, request
+from flask_socketio import SocketIO, emit
 
 app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode="gevent")
