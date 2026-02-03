@@ -8,7 +8,7 @@ A browser-based terminal emulator built with Flask and xterm.js, designed for cl
 - **Real-time I/O** - Responsive terminal with polling-based communication
 - **Terminal Resizing** - Dynamic resize support for responsive layouts
 - **Databricks Integration** - Auto-sync projects to Databricks Workspace on git commits
-- **Claude Code CLI** - Pre-configured AI-assisted coding with Anthropic's Claude
+- **Claude Code CLI** - Pre-configured to use the Databricks host from `app.yaml` as the Anthropic API endpoint
 - **Micro Editor** - Ships with [micro](https://micro-editor.github.io/), a modern terminal-based text editor
 
 ## Quick Start
@@ -70,6 +70,7 @@ Open http://localhost:8000 in your browser.
 xterm-experiment/
 ├── app.py                 # Flask backend with PTY management
 ├── app.yaml               # Databricks Apps deployment config
+├── app.yaml.template      # Template for app.yaml configuration
 ├── requirements.txt       # Python dependencies
 ├── setup_claude.py        # Claude Code CLI configuration
 ├── sync_to_workspace.py   # Git hook for Databricks sync
@@ -79,6 +80,28 @@ xterm-experiment/
 └── docs/
     └── plans/             # Design documentation
 ```
+
+## Configuration
+
+### Setting up app.yaml
+
+Copy the template and configure your Databricks workspace:
+
+```bash
+cp app.yaml.template app.yaml
+```
+
+Edit `app.yaml` and replace `<your-workspace>` with your Databricks workspace URL:
+
+```yaml
+env:
+  - name: DATABRICKS_HOST
+    value: https://<your-workspace>.cloud.databricks.com
+```
+
+The `DATABRICKS_HOST` is used by both:
+- **Workspace sync** - To upload projects on git commits
+- **Claude Code CLI** - As the Anthropic API endpoint (via Databricks serving endpoints)
 
 ## Databricks Deployment
 

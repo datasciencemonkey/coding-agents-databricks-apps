@@ -4,3 +4,6 @@ __pycache__/
 .env
 .venv/
 venv/
+
+# Workspace-specific config (use app.yaml.template)
+app.yaml
