@@ -1,4 +1,4 @@
-# Web Terminal with Databricks Integration
+# claude-code-cli-bricks
 
 A browser-based terminal emulator built with Flask and xterm.js, designed for cloud development environments with Databricks workspace integration and Claude Code CLI support.
 
@@ -22,8 +22,8 @@ A browser-based terminal emulator built with Flask and xterm.js, designed for cl
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/xterm-experiment.git
-cd xterm-experiment
+git clone https://github.com/your-username/claude-code-cli-bricks.git
+cd claude-code-cli-bricks
 
 # Install dependencies
 uv pip install -r requirements.txt
@@ -67,7 +67,7 @@ Open http://localhost:8000 in your browser.
 ## Project Structure
 
 ```
-xterm-experiment/
+claude-code-cli-bricks/
 ├── app.py                 # Flask backend with PTY management
 ├── app.yaml               # Databricks Apps deployment config
 ├── app.yaml.template      # Template for app.yaml configuration
@@ -117,7 +117,7 @@ This project is configured for deployment as a Databricks App.
 ### Deploy
 
 ```bash
-databricks apps deploy xterm-experiment
+databricks apps deploy claude-code-cli-bricks
 ```
 
 ## Workspace Sync
