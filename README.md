@@ -135,6 +135,15 @@ Then deploy the code:
 databricks apps deploy claude-code-cli-bricks
 ```
 
+### Deploying from Databricks Workspace
+
+Alternatively, deploy directly from the Databricks UI:
+
+1. Clone this repo to your Databricks Workspace
+2. Navigate to **Compute** → **Apps**
+3. Click **Create App** and select **Custom App**
+4. Point to the cloned repo and deploy
+
 ## Workspace Sync
 
 When deployed, git commits automatically sync your projects to Databricks Workspace:
