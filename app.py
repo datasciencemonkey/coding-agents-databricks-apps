@@ -17,7 +17,7 @@ from collections import deque
 from utils import ensure_https
 
 # Session timeout configuration
-SESSION_TIMEOUT_SECONDS = 60        # No poll for 60s = dead session
+SESSION_TIMEOUT_SECONDS = 300       # No poll for 300s = dead session
 CLEANUP_INTERVAL_SECONDS = 30       # How often to check for stale sessions
 GRACEFUL_SHUTDOWN_WAIT = 3          # Seconds to wait after SIGHUP before SIGKILL
 
@@ -401,7 +401,7 @@ def create_session():
             sessions[session_id] = {
                 "master_fd": master_fd,
                 "pid": pid,
-                "output_buffer": deque(maxlen=1000),
+                "output_buffer": deque(maxlen=10000),
                 "last_poll_time": time.time(),
                 "created_at": time.time()
             }
