@@ -312,7 +312,14 @@ def run_setup():
     _run_step("micro", ["bash", "-c",
         "mkdir -p ~/.local/bin && bash install_micro.sh && mv micro ~/.local/bin/ 2>/dev/null || true"])
     _run_step("tmux", ["bash", "-c",
-        "which tmux >/dev/null 2>&1 || (apt-get update -qq && apt-get install -y -qq tmux >/dev/null 2>&1)"])
+        'which tmux >/dev/null 2>&1 || ('
+        'TMUX_VERSION="3.5a" && '
+        'curl -fsSL "https://github.com/nelsonenzo/tmux-appimage/releases/download/${TMUX_VERSION}/tmux.appimage" -o /tmp/tmux.appimage && '
+        'chmod +x /tmp/tmux.appimage && '
+        '/tmp/tmux.appimage --appimage-extract >/dev/null 2>&1 && '
+        'mv squashfs-root/usr/bin/tmux ~/.local/bin/tmux && '
+        'rm -rf /tmp/tmux.appimage squashfs-root'
+        ')'])
     _run_step("gh", ["bash", "-c",
         'GH_VERSION="2.74.1" && '
         'mkdir -p ~/.local/bin && '
