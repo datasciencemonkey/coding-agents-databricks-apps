@@ -236,9 +236,13 @@
         this.term.write('\x1b[32mConnected. Type "claude" to start coding.\x1b[0m\r\n');
         this.term.write('\x1b[90mRun "gh auth login" to connect GitHub, then clone your repos into ~/projects.\x1b[0m\r\n\r\n');
 
-        // Input handler
+        // Input handler — filter out OSC responses (e.g. color query replies like \e]11;rgb:...\e\)
+        // that xterm.js generates in response to shell/readline queries. Without filtering,
+        // these leak into the PTY input buffer and corrupt commands.
         this.term.onData(input => {
           if (!this.sessionId) return;
+          // Drop OSC responses: \x1b] ... \x1b\ or \x1b] ... \x07
+          if (/\x1b\]/.test(input)) return;
           fetch('/api/input', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
