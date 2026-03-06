@@ -33,3 +33,8 @@ env:
   #OPTIONAL: Set to "true" to sync commits to Databricks Workspace files (default: disabled)
   # - name: WORKSPACE_SYNC
   #   value: "true"
+  #OPTIONAL: Persist Claude Code auto-memory and shell history across container restarts.
+  # Syncs state to /Workspace/Users/{email}/.state/ every 5 min and restores on startup.
+  # Default: true (set to "false" to disable)
+  # - name: STATE_SYNC
+  #   value: "true"

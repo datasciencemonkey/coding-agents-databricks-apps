@@ -1,3 +1,4 @@
+import atexit
 import os
 import pty
 import fcntl
@@ -17,6 +18,7 @@ from flask import Flask, send_from_directory, request, jsonify, session
 from collections import deque
 
 from utils import ensure_https, resolve_auth, AuthMode, TokenRefresher
+from state_sync import save_state, restore_state, start_periodic_sync
 
 # Session timeout configuration
 SESSION_TIMEOUT_SECONDS = 120       # No poll for 120s = dead PTY wrapper (tmux persists)
@@ -52,6 +54,7 @@ setup_state = {
         {"id": "gemini",     "label": "Configuring Gemini CLI",       "status": "pending", "started_at": None, "completed_at": None, "error": None},
         {"id": "databricks", "label": "Setting up Databricks CLI",    "status": "pending", "started_at": None, "completed_at": None, "error": None},
         {"id": "git_clone",  "label": "Cloning git repositories",     "status": "pending", "started_at": None, "completed_at": None, "error": None},
+        {"id": "state",      "label": "Restoring saved state",        "status": "pending", "started_at": None, "completed_at": None, "error": None},
     ]
 }
 
@@ -342,6 +345,18 @@ def run_setup():
 
     # Clone git repos specified in GIT_REPOS env var
     _clone_git_repos()
+
+    # Restore persisted state (auto-memory, shell history) from Workspace
+    state_sync_enabled = os.environ.get("STATE_SYNC", "true").lower() in ("1", "true", "yes")
+    if state_sync_enabled:
+        _update_step("state", status="running", started_at=time.time())
+        try:
+            restore_state()
+            _update_step("state", status="complete", completed_at=time.time())
+        except Exception as e:
+            _update_step("state", status="error", completed_at=time.time(), error=str(e)[:500])
+    else:
+        _update_step("state", status="complete", completed_at=time.time())
 
     with setup_lock:
         any_error = any(s["status"] == "error" for s in setup_state["steps"])
@@ -771,6 +786,13 @@ def initialize_app():
     setup_thread = threading.Thread(target=run_setup, daemon=True, name="setup-thread")
     setup_thread.start()
     logger.info("Started background setup thread")
+
+    # State sync: periodic save + shutdown hook
+    state_sync_enabled = os.environ.get("STATE_SYNC", "true").lower() in ("1", "true", "yes")
+    if state_sync_enabled:
+        start_periodic_sync(interval=300)
+        atexit.register(save_state)
+        logger.info("State sync enabled: periodic save every 5min + shutdown hook")
 
 
 if __name__ == "__main__":

@@ -31,13 +31,15 @@ databricks apps deploy <app-name> --source-code-path /Workspace/Users/<email>/ap
 1. `gunicorn.conf.py` → `post_worker_init` → `app.initialize_app()`
 2. `initialize_app()` resolves auth (PAT or OAuth M2M via `utils.resolve_auth()`), determines app owner, starts cleanup thread, launches setup in background thread
 3. Setup runs sequentially: git config (Python), micro editor (bash), GitHub CLI (`gh`), then `setup_claude.py`, `setup_codex.py`, `setup_opencode.py`, `setup_gemini.py`, `setup_databricks.py` — each installs a CLI and writes its config files. Each step has a 300s timeout. If `GIT_REPOS` is set, repos are auto-cloned into `~/projects/` after setup.
-4. During setup, `/` serves `static/loading.html` (snake game); after setup, serves `static/index.html` (xterm.js terminal)
-5. New terminal sessions start in `~/projects/` directory
+4. **State restore**: if `STATE_SYNC=true` (default), downloads saved state (Claude Code auto-memory, shell history) from `/Workspace/Users/{email}/.state/`
+5. During setup, `/` serves `static/loading.html` (snake game); after setup, serves `static/index.html` (xterm.js terminal)
+6. New terminal sessions start in `~/projects/` directory
 
 ### Key Files
 - **`app.py`** — Flask server, PTY session management (create/input/output/resize/close), authorization, setup orchestration
 - **`utils.py`** — Auth resolution (PAT → OAuth M2M → SDK fallback), `TokenRefresher` for OAuth, `adapt_instructions_file()` for cross-CLI instruction sharing, `ensure_https()`
 - **`setup_*.py`** — Per-agent setup scripts. Each resolves gateway vs direct endpoint, installs CLI binary, writes config files. Claude uses `~/.claude/settings.json`, Gemini uses `~/.gemini/.env`, OpenCode is built from fork (`dgokeeffe/opencode#feat/databricks-ai-sdk-provider`) with native Databricks provider — auto-discovers models and handles auth via `@databricks/sdk-experimental`, config at `~/.config/opencode/opencode.json`, Codex uses `~/.codex/config.toml` + `~/.codex/.env`, Databricks CLI uses `~/.databrickscfg`
+- **`state_sync.py`** — Bidirectional state sync: `restore_state()` on startup, `save_state()` every 5 min + on shutdown. Syncs `~/.claude/projects/*/memory/` and `~/.bash_history` to `/Workspace/Users/{email}/.state/`
 - **`sync_to_workspace.py`** — Post-commit hook target: syncs `~/projects/*` repos to `/Workspace/Users/{email}/projects/` via `databricks sync`
 - **`gunicorn.conf.py`** — Must use `workers=1` (PTY fds and session state are process-local)
 
@@ -45,6 +47,14 @@ databricks apps deploy <app-name> --source-code-path /Workspace/Users/<email>/ap
 `utils.resolve_auth()` tries in order: explicit `DATABRICKS_TOKEN` (PAT), `DATABRICKS_CLIENT_ID`+`SECRET` (OAuth M2M with token refresh), SDK auto-detect. The `TokenRefresher` class runs a background thread (every 30min) to refresh OAuth tokens and update all agent config files in-place.
 
 **Git credentials** are handled by a host-aware credential helper (`git-credential-databricks`). It checks `GIT_TOKEN` first (scoped to `GIT_TOKEN_HOST` if set), then falls back to `DATABRICKS_TOKEN`. Users can also authenticate interactively via `gh auth login` (GitHub CLI is pre-installed). Workspace file sync is opt-in via `WORKSPACE_SYNC=true`.
+
+### State Persistence
+With `STATE_SYNC=true` (default), the following survives container restarts:
+- **Claude Code auto-memory** (`~/.claude/projects/*/memory/`) — synced every 5 min + on shutdown
+- **Shell history** (`~/.bash_history`) — synced every 5 min + on shutdown
+- **Git repos** (`~/projects/`) — synced on commit if `WORKSPACE_SYNC=true`
+
+**Not persisted** (by design): tmux sessions (process state), CLI binaries (rebuilt on startup), gh auth tokens (security risk).
 
 ### Security
 Single-user app: the PAT owner is determined at startup, and `@app.before_request` checks `X-Forwarded-Email` against the owner. In OAuth M2M mode, authorization is delegated to the Databricks Apps proxy.
