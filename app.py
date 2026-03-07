@@ -339,6 +339,10 @@ def _setup_git_config():
     # Write ~/.bashrc with colored prompt and aliases
     bashrc_path = os.path.join(home, ".bashrc")
     with open(bashrc_path, "w") as f:
+        f.write("# Guard against stale CWD (happens after tmux reattach if dir was recreated)\n")
+        f.write('if ! cd . 2>/dev/null; then\n')
+        f.write('    cd ~/projects 2>/dev/null || cd ~\n')
+        f.write("fi\n\n")
         f.write("# Colored prompt: user@host:dir$\n")
         f.write(
             "PS1='\\[\\033[01;32m\\]\\u@\\h\\[\\033[00m\\]:\\[\\033[01;34m\\]\\w\\[\\033[00m\\]\\$ '\n"
@@ -842,6 +846,14 @@ def create_session():
             target=read_pty_output, args=(session_id, master_fd), daemon=True
         )
         thread.start()
+
+        # Fix stale CWD on tmux reattach (dir may have been recreated with new inode)
+        if reattached:
+            time.sleep(0.3)
+            try:
+                os.write(master_fd, b"cd ~/projects 2>/dev/null\n")
+            except OSError:
+                pass
 
         return jsonify({"session_id": session_id, "reattached": reattached})
     except Exception as e:
