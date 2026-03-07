@@ -319,7 +319,7 @@ def run_setup():
         'chmod +x /tmp/tmux.appimage && '
         'cd /tmp && /tmp/tmux.appimage --appimage-extract >/dev/null 2>&1 && '
         'mv /tmp/squashfs-root/* ~/.local/lib/tmux-appdir/ && '
-        'printf \'#!/bin/bash\\nexec "$HOME/.local/lib/tmux-appdir/AppRun" "$@"\\n\' > ~/.local/bin/tmux && '
+        'printf \'#!/bin/bash\\nexport APPDIR="$HOME/.local/lib/tmux-appdir"\\nexec "$APPDIR/AppRun" "$@"\\n\' > ~/.local/bin/tmux && '
         'chmod +x ~/.local/bin/tmux && '
         'rm -rf /tmp/tmux.appimage /tmp/squashfs-root'
         ')'])
