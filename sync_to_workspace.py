@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """Sync a project directory to Databricks Workspace."""
-import os
+
 import sys
 import subprocess
 from pathlib import Path
@@ -12,18 +12,13 @@ except ImportError:
     error_log = Path.home() / ".sync-errors.log"
     with open(error_log, "a") as f:
         f.write(f"databricks-sdk not installed for {sys.executable}\n")
-    print(f"⚠ databricks-sdk not available", file=sys.stderr)
+    print("⚠ databricks-sdk not available", file=sys.stderr)
     sys.exit(0)
 
 
 def get_user_email():
-    """Get current user's email from Databricks token."""
-    # Force PAT auth, ignore OAuth credentials
-    w = WorkspaceClient(
-        host=os.environ.get("DATABRICKS_HOST"),
-        token=os.environ.get("DATABRICKS_TOKEN"),
-        auth_type="pat"
-    )
+    """Get current user's email from Databricks credentials."""
+    w = WorkspaceClient()
     return w.current_user.me().user_name
 
 
@@ -42,16 +37,10 @@ def sync_project(project_path: Path):
         user_email = get_user_email()
         workspace_dest = f"/Workspace/Users/{user_email}/projects/{project_path.name}"
 
-        # Create env with only PAT auth (remove OAuth vars)
-        sync_env = os.environ.copy()
-        sync_env.pop("DATABRICKS_CLIENT_ID", None)
-        sync_env.pop("DATABRICKS_CLIENT_SECRET", None)
-
         result = subprocess.run(
             ["databricks", "sync", str(project_path), workspace_dest, "--watch=false"],
             capture_output=True,
             text=True,
-            env=sync_env
         )
 
         if result.returncode == 0:
@@ -64,7 +53,7 @@ def sync_project(project_path: Path):
         error_log = Path.home() / ".sync-errors.log"
         with open(error_log, "a") as f:
             f.write(f"{project_path}: {e}\n")
-        print(f"⚠ Sync failed (logged to ~/.sync-errors.log)", file=sys.stderr)
+        print("⚠ Sync failed (logged to ~/.sync-errors.log)", file=sys.stderr)
 
 
 if __name__ == "__main__":

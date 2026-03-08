@@ -1,6 +1,8 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Terminal</title>
   <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/static/lib/xterm.css">
@@ -8,251 +10,168 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cascadia+Code&family=Fira+Code&family=JetBrains+Mono&family=Source+Code+Pro&display=swap" rel="stylesheet">
   <style>
-    body { margin: 0; font-family: monospace; transition: background 0.3s, color 0.3s; }
-    #status { position: absolute; top: 10px; left: 10px; z-index: 1000; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #1e1e1e; color: #fff; font-family: monospace; overflow: hidden; }
 
-    /* Pane container */
-    #pane-container { display: flex; flex-direction: row; height: 100vh; width: 100vw; }
-    .pane { flex: 1; position: relative; overflow: hidden; min-width: 0; }
-    .pane.active { box-shadow: inset 0 0 0 2px rgba(100,150,255,0.35); }
-
-    /* Divider */
-    #pane-divider {
-      flex: 0 0 4px; cursor: col-resize;
-      background: rgba(128,128,128,0.15);
-      transition: background 0.15s;
-      z-index: 1;
-    }
-    #pane-divider:hover, #pane-divider.dragging {
-      background: rgba(100,150,255,0.5);
-    }
-
-    /* Toolbar — translucent right-edge drawer */
-    #toolbar-tab {
-      position: fixed; bottom: 12px; right: 0; z-index: 1001;
-      cursor: pointer; padding: 10px 4px;
-      background: rgba(255,255,255,0.06);
-      border-radius: 8px 0 0 8px;
-      border: 1px solid rgba(255,255,255,0.08); border-right: none;
-      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-      color: inherit; font-size: 12px; line-height: 1;
-      display: flex; align-items: center; justify-content: center;
-      transition: background 0.2s, right 0.25s ease, box-shadow 0.2s;
-      user-select: none;
-    }
-    #toolbar-tab:hover {
-      background: rgba(255,255,255,0.12);
-      box-shadow: 0 0 12px rgba(100,150,255,0.15);
-    }
-    #toolbar-tab .arrow {
-      font-size: 9px; transition: transform 0.3s ease; display: block;
-    }
-    #toolbar-wrapper { position: fixed; bottom: 0; right: 0; z-index: 1000; pointer-events: none; }
+    /* Toolbar */
     #toolbar {
-      pointer-events: auto;
-      display: flex; flex-direction: column; gap: 12px;
-      padding: 16px 12px; min-width: 170px;
-      background: rgba(255,255,255,0.04);
-      border-left: 1px solid rgba(255,255,255,0.08);
-      border-top: 1px solid rgba(255,255,255,0.08);
-      border-top-left-radius: 14px;
-      backdrop-filter: blur(24px) saturate(1.2);
-      -webkit-backdrop-filter: blur(24px) saturate(1.2);
-      box-shadow: -4px -2px 24px rgba(0,0,0,0.2), 0 0 0 1px rgba(255,255,255,0.03) inset;
-      max-height: 80vh; box-sizing: border-box; overflow-y: auto;
-      transform: translateX(100%); transition: transform 0.25s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 12px;
+      background: #1e1e1e;
+      border-bottom: 1px solid #333;
+      height: 36px;
+      flex-shrink: 0;
     }
-    #toolbar-wrapper.open #toolbar { transform: translateX(0); }
-    #toolbar .group-label {
-      font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px;
-      opacity: 0.35; padding: 0 2px; margin-top: 2px; font-weight: 600;
+    #toolbar .toolbar-label {
+      color: #888;
+      font-size: 12px;
+      margin-right: 4px;
     }
-    #toolbar select, #toolbar button {
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.08); border-radius: 6px;
-      padding: 6px 10px; cursor: pointer; font-size: 12px; line-height: 1.4;
-      color: inherit; transition: all 0.15s; width: 100%;
-      text-align: left; box-sizing: border-box;
+    #toolbar .layout-btn {
+      background: #333;
+      color: #ccc;
+      border: 1px solid #555;
+      border-radius: 3px;
+      padding: 2px 10px;
+      font-family: monospace;
+      font-size: 12px;
+      cursor: pointer;
+      transition: background 0.15s;
     }
-    #toolbar select:hover, #toolbar button:hover {
-      background: rgba(255,255,255,0.1);
-      border-color: rgba(255,255,255,0.18);
+    #toolbar .layout-btn:hover { background: #444; }
+    #toolbar .layout-btn.active { background: #0078d4; color: #fff; border-color: #0078d4; }
+    #toolbar .pane-indicators {
+      display: flex;
+      gap: 4px;
+      margin-left: 16px;
     }
-    #toolbar select { font-family: inherit; }
-    #toolbar .tool-row {
-      display: flex; align-items: center; gap: 6px;
+    #toolbar .pane-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #555;
     }
-    #toolbar .tool-row button {
-      width: auto; flex: 1; text-align: center; padding: 8px; font-size: 18px;
-      border-radius: 8px; display: flex; align-items: center; justify-content: center;
-    }
-    #toolbar .tool-row button:hover {
-      background: rgba(100,150,255,0.12);
-      border-color: rgba(100,150,255,0.25);
-      box-shadow: 0 0 8px rgba(100,150,255,0.1);
-    }
-    #toolbar .font-size-row {
-      display: flex; align-items: center; gap: 4px;
-    }
-    #toolbar .font-size-row button {
-      width: auto; flex-shrink: 0; padding: 5px 10px; text-align: center;
-      font-size: 12px; font-weight: 600;
-    }
-    #toolbar .font-size-row span { flex: 1; text-align: center; font-size: 12px; opacity: 0.7; }
-    #toolbar .separator {
-      height: 1px; width: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+    #toolbar .pane-dot.active { background: #4ec9b0; }
+    #toolbar .pane-dot.focused { background: #0078d4; box-shadow: 0 0 4px #0078d4; }
+    #toolbar .shortcut-hint {
+      margin-left: auto;
+      color: #666;
+      font-size: 11px;
     }
 
-    /* Speak button inside toolbar */
-    #speak-btn { display: none; }
-    #speak-btn.supported { display: flex; }
-    #speak-btn.recording {
-      background: rgba(255,50,50,0.12) !important;
-      border-color: rgba(255,80,80,0.4) !important;
-      box-shadow: 0 0 12px rgba(255,50,50,0.15);
+    /* Pane container -- CSS grid */
+    #pane-container {
+      display: grid;
+      width: 100vw;
+      height: calc(100vh - 36px);
+      gap: 2px;
+      background: #111;
     }
-    #speak-btn.recording .speak-dot {
-      width: 8px; height: 8px; border-radius: 50%; background: #ff4444;
-      animation: pulse 1s infinite; flex-shrink: 0;
+    /* Layout grid templates */
+    #pane-container.layout-single { grid-template-columns: 1fr; grid-template-rows: 1fr; }
+    #pane-container.layout-hsplit { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr; }
+    #pane-container.layout-vsplit { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
+    #pane-container.layout-quad   { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+    #pane-container.layout-six    { grid-template-columns: 1fr 1fr 1fr; grid-template-rows: 1fr 1fr; }
+    #pane-container.layout-nine   { grid-template-columns: 1fr 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; }
+    #pane-container.layout-twelve { grid-template-columns: 1fr 1fr 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; }
+    #pane-container.layout-sixteen { grid-template-columns: 1fr 1fr 1fr 1fr; grid-template-rows: 1fr 1fr 1fr 1fr; }
+    #pane-container.layout-twenty { grid-template-columns: 1fr 1fr 1fr 1fr 1fr; grid-template-rows: 1fr 1fr 1fr 1fr; }
+
+    /* Pane slot */
+    .pane-slot {
+      display: flex;
+      flex-direction: column;
+      background: #1e1e1e;
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+    }
+    .pane-slot.focused { outline: 2px solid #0078d4; outline-offset: -2px; }
+
+    /* Pane header */
+    .pane-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 2px 8px;
+      background: #252525;
+      border-bottom: 1px solid #333;
+      height: 24px;
+      flex-shrink: 0;
+      font-size: 11px;
+      color: #999;
+    }
+    .pane-header .pane-title { user-select: none; }
+    .pane-header .close-btn {
+      background: none;
+      border: none;
+      color: #999;
+      cursor: pointer;
+      font-size: 14px;
+      padding: 0 4px;
+      line-height: 1;
+    }
+    .pane-header .close-btn:hover { color: #ff5555; }
+
+    /* Terminal container inside pane */
+    .pane-terminal {
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
     }
 
-    /* Search bar */
-    #search-bar {
-      display: none; position: fixed; top: 10px; right: 40px; z-index: 1001;
-      padding: 6px 8px; border-radius: 6px;
-      border: 1px solid rgba(128,128,128,0.4);
-      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-      gap: 4px; align-items: center;
+    /* Empty slot -- shows + button */
+    .pane-slot-empty {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #1a1a1a;
     }
-    #search-bar.visible { display: flex; }
-    #search-bar input {
-      background: transparent; border: 1px solid rgba(128,128,128,0.3); border-radius: 3px;
-      padding: 3px 6px; font-size: 13px; color: inherit; outline: none; width: 200px;
-      font-family: inherit;
+    .add-pane-btn {
+      background: #333;
+      color: #888;
+      border: 1px solid #555;
+      border-radius: 4px;
+      width: 48px;
+      height: 48px;
+      font-size: 28px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
-    #search-bar input:focus { border-color: rgba(100,150,255,0.6); }
-    #search-bar button {
-      background: none; border: 1px solid rgba(128,128,128,0.3); border-radius: 3px;
-      padding: 2px 8px; cursor: pointer; color: inherit; font-size: 12px;
-    }
-    #search-bar button:hover { border-color: rgba(128,128,128,0.7); }
+    .add-pane-btn:hover { background: #444; color: #ccc; }
 
-    /* Voice dictation */
-    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
-    #dictation-preview {
-      display: none; position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
-      z-index: 1001; width: min(85vw, 700px); border-radius: 16px;
-      border: 1px solid rgba(128,128,128,0.25);
-      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-      box-shadow: 0 8px 32px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.05) inset;
-      flex-direction: column; overflow: hidden;
-    }
-    #dictation-preview.visible { display: flex; }
-    #dictation-header {
-      display: flex; align-items: center; gap: 8px;
-      padding: 12px 16px; border-bottom: 1px solid rgba(128,128,128,0.15);
-      font-size: 13px; font-weight: 600; letter-spacing: 0.3px;
-    }
-    #dictation-header .rec-dot {
-      width: 8px; height: 8px; border-radius: 50%; background: #ff4444;
-      animation: pulse 1s infinite; flex-shrink: 0;
-    }
-    #dictation-header .shortcut {
-      margin-left: auto; font-size: 11px; opacity: 0.5; font-weight: 400;
-    }
-    #dictation-input {
-      width: 100%; min-height: 80px; max-height: 200px; resize: vertical;
-      background: transparent; border: none; padding: 14px 16px;
-      font-size: 16px; line-height: 1.5; color: inherit;
-      outline: none; font-family: inherit; word-wrap: break-word;
-      box-sizing: border-box;
-    }
-    #dictation-input::placeholder { opacity: 0.4; }
-    #dictation-interim {
-      padding: 0 16px 8px; font-size: 14px; line-height: 1.4;
-      font-style: italic; opacity: 0.45; min-height: 0;
-      word-wrap: break-word; display: none;
-    }
-    #dictation-interim.has-text { display: block; }
-    #dictation-actions {
-      display: flex; align-items: center; gap: 8px;
-      padding: 10px 16px; border-top: 1px solid rgba(128,128,128,0.15);
-    }
-    #dictation-actions button {
-      background: none; border: 1px solid rgba(128,128,128,0.3); border-radius: 8px;
-      padding: 6px 16px; cursor: pointer; color: inherit; font-size: 13px;
-      font-weight: 500; transition: all 0.15s;
-    }
-    #dictation-actions button:hover { border-color: rgba(128,128,128,0.6); }
-    #dictation-actions button.send-btn {
-      background: rgba(80,200,120,0.15); border-color: rgba(80,200,120,0.5);
-    }
-    #dictation-actions button.send-btn:hover {
-      background: rgba(80,200,120,0.25); border-color: rgba(80,200,120,0.8);
-    }
-    #dictation-actions .hint {
-      margin-left: auto; font-size: 11px; opacity: 0.4;
+    /* Status overlay */
+    #status {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 1000;
+      font-size: 12px;
     }
   </style>
 </head>
 <body>
-  <div id="status">Loading...</div>
-  <div id="toolbar-tab" title="Toggle toolbar">
-    <span class="arrow">&#x25C0;</span>
+  <div id="toolbar" role="toolbar" aria-label="Terminal layout controls">
+    <span class="toolbar-label">Layout:</span>
+    <button class="layout-btn active" data-layout="single" aria-label="Single terminal">1</button>
+    <button class="layout-btn" data-layout="hsplit" aria-label="2 terminals horizontal">2h</button>
+    <button class="layout-btn" data-layout="vsplit" aria-label="2 terminals vertical">2v</button>
+    <button class="layout-btn" data-layout="quad" aria-label="4 terminals">4</button>
+    <button class="layout-btn" data-layout="six" aria-label="6 terminals">6</button>
+    <button class="layout-btn" data-layout="nine" aria-label="9 terminals">9</button>
+    <button class="layout-btn" data-layout="twelve" aria-label="12 terminals">12</button>
+    <button class="layout-btn" data-layout="sixteen" aria-label="16 terminals">16</button>
+    <button class="layout-btn" data-layout="twenty" aria-label="20 terminals">20</button>
+    <div class="pane-indicators" id="pane-indicators"></div>
+    <span class="shortcut-hint">Ctrl+Shift+N: cycle focus</span>
   </div>
-  <div id="toolbar-wrapper">
-    <div id="toolbar">
-      <div class="group-label">Theme</div>
-      <select id="theme-select" title="Color theme"></select>
-      <button id="theme-toggle" title="Toggle light/dark mode">&#x2600;&#xFE0F;</button>
-      <div class="separator"></div>
-      <div class="group-label">Font</div>
-      <select id="font-family-select" title="Font family"></select>
-      <div class="font-size-row">
-        <button id="font-decrease" title="Decrease font size (Ctrl+-)">A-</button>
-        <span id="font-size-display"></span>
-        <button id="font-increase" title="Increase font size (Ctrl+=)">A+</button>
-      </div>
-      <div class="separator"></div>
-      <div class="tool-row">
-        <button id="search-btn" title="Search (Ctrl+Shift+F)">&#x1F50D;</button>
-        <button id="speak-btn" title="Voice (Option+V)">
-          <span class="speak-dot" style="display:none;"></span>
-          &#x1F3A4;
-        </button>
-        <button id="split-btn" title="Split pane (Ctrl+Shift+D)">&#x229E;</button>
-        <button id="close-pane-btn" title="Close pane (Ctrl+Shift+W)" style="display:none;">&#x2715;</button>
-        <button id="next-pane-btn" title="Next pane (Ctrl+Shift+])" style="display:none;">&#x21C6;</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Search bar overlay -->
-  <div id="search-bar">
-    <input id="search-input" type="text" placeholder="Search..." autocomplete="off" spellcheck="false">
-    <button id="search-prev" title="Previous (Shift+Enter)">&#x25B2;</button>
-    <button id="search-next" title="Next (Enter)">&#x25BC;</button>
-    <button id="search-close" title="Close (Escape)">&#x2715;</button>
-  </div>
-
-  <!-- Voice dictation preview -->
-  <div id="dictation-preview">
-    <div id="dictation-header">
-      <span class="rec-dot"></span>
-      <span>Voice Dictation</span>
-      <span class="shortcut">&#x2325;V</span>
-    </div>
-    <textarea id="dictation-input" placeholder="Start speaking..."></textarea>
-    <div id="dictation-interim"></div>
-    <div id="dictation-actions">
-      <button id="dictation-send" class="send-btn">Send &#x23CE;</button>
-      <button id="dictation-cancel">Cancel</button>
-      <span class="hint">Enter to send &middot; Esc to cancel</span>
-    </div>
-  </div>
-
-  <div id="pane-container"></div>
+  <div id="pane-container" class="layout-single" role="main" aria-label="Terminal panes"></div>
+  <div id="status" aria-live="polite">Loading...</div>
 
   <script src="/static/lib/xterm.js"></script>
   <script src="/static/lib/addon-fit.js"></script>
@@ -260,681 +179,516 @@
   <script src="/static/lib/addon-search.js"></script>
   <script src="/static/lib/addon-image.js"></script>
   <script>
-    // ── Theme Presets ──────────────────────────────────────────────
-    const themes = {
-      'Dark': {
-        type: 'dark',
-        body: '#1e1e1e',
-        theme: {
-          background: '#1e1e1e', foreground: '#d4d4d4', cursor: '#d4d4d4',
-          selectionBackground: '#264f78',
-          black: '#1e1e1e', red: '#f44747', green: '#6a9955', yellow: '#d7ba7d',
-          blue: '#569cd6', magenta: '#c586c0', cyan: '#4ec9b0', white: '#d4d4d4'
-        }
-      },
-      'Light': {
-        type: 'light',
-        body: '#f5f5f5',
-        theme: {
-          background: '#f5f5f5', foreground: '#383a42', cursor: '#526eff',
-          selectionBackground: '#d7d7ff',
-          black: '#383a42', red: '#e45649', green: '#50a14f', yellow: '#c18401',
-          blue: '#4078f2', magenta: '#a626a4', cyan: '#0184bc', white: '#fafafa'
-        }
-      },
-      'Dracula': {
-        type: 'dark',
-        body: '#282a36',
-        theme: {
-          background: '#282a36', foreground: '#f8f8f2', cursor: '#f8f8f2',
-          selectionBackground: '#44475a',
-          black: '#21222c', red: '#ff5555', green: '#50fa7b', yellow: '#f1fa8c',
-          blue: '#bd93f9', magenta: '#ff79c6', cyan: '#8be9fd', white: '#f8f8f2'
-        }
-      },
-      'Solarized Dark': {
-        type: 'dark',
-        body: '#002b36',
-        theme: {
-          background: '#002b36', foreground: '#839496', cursor: '#839496',
-          selectionBackground: '#073642',
-          black: '#073642', red: '#dc322f', green: '#859900', yellow: '#b58900',
-          blue: '#268bd2', magenta: '#d33682', cyan: '#2aa198', white: '#eee8d5'
-        }
-      },
-      'Solarized Light': {
-        type: 'light',
-        body: '#fdf6e3',
-        theme: {
-          background: '#fdf6e3', foreground: '#657b83', cursor: '#657b83',
-          selectionBackground: '#eee8d5',
-          black: '#073642', red: '#dc322f', green: '#859900', yellow: '#b58900',
-          blue: '#268bd2', magenta: '#d33682', cyan: '#2aa198', white: '#fdf6e3'
-        }
-      },
-      'Nord': {
-        type: 'dark',
-        body: '#2e3440',
-        theme: {
-          background: '#2e3440', foreground: '#d8dee9', cursor: '#d8dee9',
-          selectionBackground: '#434c5e',
-          black: '#3b4252', red: '#bf616a', green: '#a3be8c', yellow: '#ebcb8b',
-          blue: '#81a1c1', magenta: '#b48ead', cyan: '#88c0d0', white: '#e5e9f0'
-        }
-      },
-      'Monokai': {
-        type: 'dark',
-        body: '#272822',
-        theme: {
-          background: '#272822', foreground: '#f8f8f2', cursor: '#f8f8f0',
-          selectionBackground: '#49483e',
-          black: '#272822', red: '#f92672', green: '#a6e22e', yellow: '#e6db74',
-          blue: '#66d9ef', magenta: '#ae81ff', cyan: '#a1efe4', white: '#f8f8f2'
-        }
-      },
-      'GitHub Dark': {
-        type: 'dark',
-        body: '#0d1117',
-        theme: {
-          background: '#0d1117', foreground: '#c9d1d9', cursor: '#c9d1d9',
-          selectionBackground: '#1f2937',
-          black: '#0d1117', red: '#ff7b72', green: '#7ee787', yellow: '#d29922',
-          blue: '#79c0ff', magenta: '#d2a8ff', cyan: '#a5d6ff', white: '#c9d1d9'
-        }
+    /* ===== TerminalPane: manages one xterm + session ===== */
+    class TerminalPane {
+      constructor(slotIndex) {
+        this.slotIndex = slotIndex;
+        this.sessionId = null;
+        this.term = null;
+        this.fitAddon = null;
+        this.element = null;
+        this.alive = false;
       }
-    };
 
-    // ── Font Families ──────────────────────────────────────────────
-    const fontFamilies = {
-      'System Default': 'monospace',
-      'JetBrains Mono': '"JetBrains Mono", monospace',
-      'Fira Code': '"Fira Code", monospace',
-      'Cascadia Code': '"Cascadia Code", monospace',
-      'Source Code Pro': '"Source Code Pro", monospace'
-    };
+      async init(container) {
+        // Build DOM
+        this.element = document.createElement('div');
+        this.element.className = 'pane-slot';
+        this.element.dataset.slot = this.slotIndex;
 
-    // ── State ──────────────────────────────────────────────────────
-    const MIN_FONT_SIZE = 8;
-    const MAX_FONT_SIZE = 32;
-    const DEFAULT_FONT_SIZE = 14;
-
-    let currentFontSize = parseInt(localStorage.getItem('terminal-font-size')) || DEFAULT_FONT_SIZE;
-    let currentFontFamily = localStorage.getItem('terminal-font-family') || 'System Default';
-    let currentThemeName = localStorage.getItem('terminal-theme-name') || null;
-    let lastDarkTheme = localStorage.getItem('terminal-last-dark') || 'Dark';
-    let lastLightTheme = localStorage.getItem('terminal-last-light') || 'Light';
-
-    // ── Pane Object Model ─────────────────────────────────────────
-    // Each pane: { id, element, term, fitAddon, searchAddon, sessionId }
-    let panes = [];
-    let activePaneId = null;
-    let paneIdCounter = 0;
-
-    function getActivePane() {
-      return panes.find(p => p.id === activePaneId) || panes[0];
-    }
-
-    function focusPane(id) {
-      activePaneId = id;
-      panes.forEach(p => {
-        p.element.classList.toggle('active', p.id === id);
-        if (p.id === id) p.term.focus();
-      });
-    }
-
-    // Resolve initial theme
-    if (!currentThemeName || !themes[currentThemeName]) {
-      const prefersDark = !window.matchMedia('(prefers-color-scheme: light)').matches;
-      currentThemeName = prefersDark ? 'Dark' : 'Light';
-    }
-
-    // ── Theme Application ──────────────────────────────────────────
-    function applyTheme(name) {
-      const preset = themes[name];
-      if (!preset) return;
-      currentThemeName = name;
-      document.body.style.background = preset.body;
-      document.body.style.color = preset.type === 'dark' ? '#fff' : '#383a42';
-      document.getElementById('theme-toggle').textContent = preset.type === 'dark' ? '\u2600\uFE0F' : '\uD83C\uDF19';
-      const overlayBg = preset.type === 'dark' ? 'rgba(30,30,30,0.9)' : 'rgba(245,245,245,0.9)';
-      document.getElementById('search-bar').style.background = overlayBg;
-      document.getElementById('dictation-preview').style.background = overlayBg;
-      // Apply to all panes
-      panes.forEach(p => { p.term.options.theme = preset.theme; });
-      if (preset.type === 'dark') {
-        lastDarkTheme = name;
-        localStorage.setItem('terminal-last-dark', name);
-      } else {
-        lastLightTheme = name;
-        localStorage.setItem('terminal-last-light', name);
-      }
-      localStorage.setItem('terminal-theme-name', name);
-      document.getElementById('theme-select').value = name;
-    }
-
-    // ── Font Size ──────────────────────────────────────────────────
-    function updateFontSizeDisplay() {
-      document.getElementById('font-size-display').textContent = currentFontSize + 'px';
-    }
-
-    function setFontSize(size) {
-      currentFontSize = Math.max(MIN_FONT_SIZE, Math.min(MAX_FONT_SIZE, size));
-      localStorage.setItem('terminal-font-size', currentFontSize);
-      updateFontSizeDisplay();
-      panes.forEach(p => { p.term.options.fontSize = currentFontSize; });
-      refitAllPanes();
-    }
-
-    // ── Font Family ────────────────────────────────────────────────
-    function setFontFamily(name) {
-      const family = fontFamilies[name];
-      if (!family) return;
-      currentFontFamily = name;
-      localStorage.setItem('terminal-font-family', name);
-      panes.forEach(p => { p.term.options.fontFamily = family; });
-      refitAllPanes();
-      document.getElementById('font-family-select').value = name;
-    }
-
-    // ── Refit all panes ─────────────────────────────────────────────
-    function refitAllPanes() {
-      panes.forEach(p => {
-        p.fitAddon.fit();
-        if (p.sessionId) sendResize(p.term.cols, p.term.rows, p.sessionId);
-      });
-    }
-
-    // ── Populate toolbar dropdowns ─────────────────────────────────
-    const themeSelect = document.getElementById('theme-select');
-    Object.keys(themes).forEach(name => {
-      const opt = document.createElement('option');
-      opt.value = name; opt.textContent = name;
-      themeSelect.appendChild(opt);
-    });
-    themeSelect.value = currentThemeName;
-    themeSelect.addEventListener('change', e => applyTheme(e.target.value));
-
-    const fontFamilySelect = document.getElementById('font-family-select');
-    Object.keys(fontFamilies).forEach(name => {
-      const opt = document.createElement('option');
-      opt.value = name; opt.textContent = name;
-      fontFamilySelect.appendChild(opt);
-    });
-    fontFamilySelect.value = currentFontFamily;
-    fontFamilySelect.addEventListener('change', e => setFontFamily(e.target.value));
-
-    document.getElementById('theme-toggle').addEventListener('click', () => {
-      const currentType = themes[currentThemeName].type;
-      applyTheme(currentType === 'dark' ? lastLightTheme : lastDarkTheme);
-    });
-
-    document.getElementById('font-decrease').addEventListener('click', () => setFontSize(currentFontSize - 1));
-    document.getElementById('font-increase').addEventListener('click', () => setFontSize(currentFontSize + 1));
-
-    applyTheme(currentThemeName);
-    updateFontSizeDisplay();
-
-    // ── Toolbar drawer toggle ──────────────────────────────────────
-    const toolbarWrapper = document.getElementById('toolbar-wrapper');
-    const toolbarTab = document.getElementById('toolbar-tab');
-    const toolbarPanel = document.getElementById('toolbar');
-    toolbarTab.addEventListener('click', () => {
-      const isOpen = toolbarWrapper.classList.toggle('open');
-      if (isOpen) {
-        requestAnimationFrame(() => {
-          const w = toolbarPanel.offsetWidth;
-          toolbarTab.style.right = w + 'px';
+        const header = document.createElement('div');
+        header.className = 'pane-header';
+        const title = document.createElement('span');
+        title.className = 'pane-title';
+        title.textContent = 'Terminal ' + (this.slotIndex + 1);
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'close-btn';
+        closeBtn.innerHTML = 'X';
+        closeBtn.title = 'Close terminal';
+        closeBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          layoutManager.closePane(this.slotIndex);
         });
-      } else {
-        toolbarTab.style.right = '0';
-      }
-    });
+        header.appendChild(title);
+        header.appendChild(closeBtn);
 
-    // ── Search ─────────────────────────────────────────────────────
-    let searchVisible = false;
-    const searchBar = document.getElementById('search-bar');
-    const searchInput = document.getElementById('search-input');
+        const termDiv = document.createElement('div');
+        termDiv.className = 'pane-terminal';
 
-    function toggleSearch() {
-      searchVisible = !searchVisible;
-      searchBar.classList.toggle('visible', searchVisible);
-      if (searchVisible) {
-        searchInput.focus();
-        searchInput.select();
-      } else {
-        const ap = getActivePane();
-        if (ap && ap.searchAddon) ap.searchAddon.clearDecorations();
-        if (ap) ap.term.focus();
-      }
-    }
+        this.element.appendChild(header);
+        this.element.appendChild(termDiv);
+        container.appendChild(this.element);
 
-    function doSearch(direction) {
-      const ap = getActivePane();
-      if (!ap || !ap.searchAddon) return;
-      const query = searchInput.value;
-      if (!query) return;
-      const opts = { decorations: { matchOverviewRuler: '#888', activeMatchColorOverviewRuler: '#ffb000' } };
-      if (direction === 'next') {
-        ap.searchAddon.findNext(query, opts);
-      } else {
-        ap.searchAddon.findPrevious(query, opts);
-      }
-    }
+        // Click to focus
+        this.element.addEventListener('click', () => {
+          layoutManager.setFocus(this.slotIndex);
+        });
 
-    searchInput.addEventListener('input', () => doSearch('next'));
-    document.getElementById('search-next').addEventListener('click', () => doSearch('next'));
-    document.getElementById('search-prev').addEventListener('click', () => doSearch('prev'));
-    document.getElementById('search-close').addEventListener('click', () => toggleSearch());
-    document.getElementById('search-btn').addEventListener('click', () => toggleSearch());
+        // Create xterm
+        this.term = new Terminal({
+          cursorBlink: true,
+          theme: { background: '#1e1e1e' },
+          fontSize: 13,
+        });
+        this.fitAddon = new FitAddon.FitAddon();
+        const webLinksAddon = new WebLinksAddon.WebLinksAddon();
+        this.term.loadAddon(this.fitAddon);
+        this.term.loadAddon(webLinksAddon);
+        this.term.open(termDiv);
 
-    searchInput.addEventListener('keydown', e => {
-      if (e.key === 'Enter') { e.preventDefault(); doSearch(e.shiftKey ? 'prev' : 'next'); }
-      if (e.key === 'Escape') { e.preventDefault(); toggleSearch(); }
-    });
+        // Fit after a frame so the container has dimensions
+        await new Promise(r => requestAnimationFrame(r));
+        this.fitAddon.fit();
 
-    // ── Voice Dictation ────────────────────────────────────────────
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    let recognition = null;
-    let dictationActive = false;
-    const speakBtn = document.getElementById('speak-btn');
-    const speakDot = speakBtn.querySelector('.speak-dot');
-    const dictationPreview = document.getElementById('dictation-preview');
-    const dictationInput = document.getElementById('dictation-input');
-    const dictationInterim = document.getElementById('dictation-interim');
+        // Create PTY session (pane_id maps to a persistent tmux session)
+        const resp = await fetch('/api/session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pane_id: this.slotIndex })
+        });
+        const data = await resp.json();
+        if (data.error) throw new Error(data.error);
+        this.sessionId = data.session_id;
+        this.alive = true;
 
-    if (SpeechRecognition) {
-      speakBtn.classList.add('supported');
-      recognition = new SpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = 'en-US';
+        // Send initial size
+        await this.sendResize();
 
-      recognition.onresult = (event) => {
-        let final = '';
-        let interim = '';
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const transcript = event.results[i][0].transcript;
-          if (event.results[i].isFinal) {
-            final += transcript;
-          } else {
-            interim += transcript;
-          }
+        // Only show greeting for new sessions (not reattached tmux sessions)
+        if (!data.reattached) {
+          this.term.write('\x1b[32mConnected. Type "claude" to start coding.\x1b[0m\r\n');
+          this.term.write('\x1b[90mRun "gh auth login" to connect GitHub, then clone your repos into ~/projects.\x1b[0m\r\n\r\n');
         }
-        if (final) {
-          dictationInput.value = (dictationInput.value + (dictationInput.value ? ' ' : '') + final).trim();
-          dictationInterim.textContent = '';
-          dictationInterim.classList.remove('has-text');
+
+        // Input handler — filter out OSC responses (e.g. color query replies like \e]11;rgb:...\e\)
+        // that xterm.js generates in response to shell/readline queries. Without filtering,
+        // these leak into the PTY input buffer and corrupt commands.
+        this.term.onData(input => {
+          if (!this.sessionId) return;
+          // Drop OSC responses: \x1b] ... \x1b\ or \x1b] ... \x07
+          if (/\x1b\]/.test(input)) return;
+          fetch('/api/input', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ session_id: this.sessionId, input: input })
+          }).catch(err => console.warn('Input send failed:', err));
+        });
+      }
+
+      async sendResize() {
+        if (!this.sessionId || !this.term) return;
+        try {
+          await fetch('/api/resize', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              session_id: this.sessionId,
+              cols: this.term.cols,
+              rows: this.term.rows
+            })
+          });
+        } catch (err) {
+          console.warn('Resize failed:', err);
         }
-        if (interim) {
-          dictationInterim.textContent = interim;
-          dictationInterim.classList.add('has-text');
+      }
+
+      fit() {
+        if (this.fitAddon && this.term && this.element) {
+          try {
+            this.fitAddon.fit();
+          } catch (e) { /* element may not be visible yet */ }
         }
-      };
+      }
 
-      recognition.onerror = () => stopDictation();
-      recognition.onend = () => {
-        if (dictationActive) {
-          try { recognition.start(); } catch(e) { stopDictation(); }
+      writeOutput(output) {
+        if (this.term && output) {
+          this.term.write(output);
         }
-      };
-    }
-
-    function startDictation() {
-      if (!recognition || dictationActive) return;
-      dictationActive = true;
-      speakBtn.classList.add('recording');
-      speakDot.style.display = '';
-      speakBtn.innerHTML = '<span class="speak-dot"></span> &#x1F3A4;';
-      dictationPreview.classList.add('visible');
-      dictationInput.value = '';
-      dictationInterim.textContent = '';
-      dictationInterim.classList.remove('has-text');
-      dictationInput.focus();
-      try { recognition.start(); } catch(e) { stopDictation(); }
-    }
-
-    function stopDictation() {
-      dictationActive = false;
-      speakBtn.classList.remove('recording');
-      speakBtn.innerHTML = '&#x1F3A4;';
-      if (recognition) { try { recognition.stop(); } catch(e) {} }
-    }
-
-    function closeDictation() {
-      stopDictation();
-      dictationPreview.classList.remove('visible');
-      dictationInput.value = '';
-      dictationInterim.textContent = '';
-      dictationInterim.classList.remove('has-text');
-      const ap = getActivePane();
-      if (ap) ap.term.focus();
-    }
-
-    function sendDictation() {
-      const text = dictationInput.value.trim();
-      const ap = getActivePane();
-      if (text && ap && ap.sessionId) {
-        sendInput(text, ap.sessionId);
       }
-      closeDictation();
-    }
 
-    speakBtn.addEventListener('click', () => {
-      if (dictationActive) closeDictation();
-      else startDictation();
-    });
-    document.getElementById('dictation-send').addEventListener('click', sendDictation);
-    document.getElementById('dictation-cancel').addEventListener('click', closeDictation);
-    dictationInput.addEventListener('keydown', e => {
-      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendDictation(); }
-      if (e.key === 'Escape') { e.preventDefault(); closeDictation(); }
-    });
-
-    // ── Global Keyboard Shortcuts ──────────────────────────────────
-    document.addEventListener('keydown', e => {
-      // Ctrl+= : increase font
-      if (e.ctrlKey && !e.altKey && !e.shiftKey && (e.key === '=' || e.key === '+')) {
-        e.preventDefault(); setFontSize(currentFontSize + 1); return;
-      }
-      // Ctrl+- : decrease font
-      if (e.ctrlKey && !e.altKey && !e.shiftKey && e.key === '-') {
-        e.preventDefault(); setFontSize(currentFontSize - 1); return;
-      }
-      // Ctrl+0 : reset font
-      if (e.ctrlKey && !e.altKey && !e.shiftKey && e.key === '0') {
-        e.preventDefault(); setFontSize(DEFAULT_FONT_SIZE); return;
-      }
-      // Ctrl+Shift+F : toggle search
-      if (e.ctrlKey && e.shiftKey && e.key === 'F') {
-        e.preventDefault(); toggleSearch(); return;
-      }
-      // Alt+V (Option+V) : toggle voice dictation
-      if (e.altKey && !e.ctrlKey && !e.shiftKey && e.code === 'KeyV') {
-        e.preventDefault();
-        if (dictationActive) closeDictation();
-        else startDictation();
-        return;
-      }
-      // Ctrl+Shift+D : split pane
-      if (e.ctrlKey && e.shiftKey && e.key === 'D') {
-        e.preventDefault(); splitPane(); return;
-      }
-      // Ctrl+Shift+W : close active pane
-      if (e.ctrlKey && e.shiftKey && e.key === 'W') {
-        e.preventDefault(); closeActivePane(); return;
-      }
-      // Ctrl+Shift+] : next pane — use e.code because Shift+] produces '}'
-      if (e.ctrlKey && e.shiftKey && e.code === 'BracketRight') {
-        e.preventDefault(); cyclePaneFocus('next'); return;
-      }
-      // Ctrl+Shift+[ : prev pane — use e.code because Shift+[ produces '{'
-      if (e.ctrlKey && e.shiftKey && e.code === 'BracketLeft') {
-        e.preventDefault(); cyclePaneFocus('prev'); return;
-      }
-    });
-
-    // ── Session / IO (parameterized by sessionId) ──────────────────
-    const status = document.getElementById('status');
-
-    async function createSession() {
-      const resp = await fetch('/api/session', { method: 'POST' });
-      const data = await resp.json();
-      if (data.error) throw new Error(data.error);
-      return data.session_id;
-    }
-
-    async function sendInput(input, sid) {
-      if (!sid) return;
-      await fetch('/api/input', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ session_id: sid, input: input })
-      });
-    }
-
-    async function sendResize(cols, rows, sid) {
-      if (!sid) return;
-      await fetch('/api/resize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ session_id: sid, cols: cols, rows: rows })
-      });
-    }
-
-    // ── Web Worker for polling ──────────────────────────────────────
-    const pollWorker = new Worker('/static/poll-worker.js');
-
-    pollWorker.onmessage = function(event) {
-      const msg = event.data;
-      const pane = panes.find(p => p.id === msg.paneId);
-      if (!pane) return;
-
-      switch (msg.type) {
-        case 'output': {
-          const data = msg.data;
-          if (data.timeout_warning) {
-            pane.term.write('\r\n\x1b[33m⚠ Session idle — will terminate soon if no activity.\x1b[0m\r\n');
-          }
-          if (data.output) pane.term.write(data.output);
-          break;
+      markExited() {
+        this.alive = false;
+        if (this.term) {
+          this.term.write('\r\n\x1b[33mShell process exited.\x1b[0m\r\n');
         }
-        case 'session_ended':
-          if (msg.reason === 'auth_expired') {
-            pane.term.write('\r\n\x1b[33m⚠ Authentication expired. Please refresh the page to re-authenticate.\x1b[0m\r\n');
-          } else if (msg.reason === 'shutting_down') {
-            pane.term.write('\r\n\x1b[33m⚠ App is restarting. Please reconnect shortly.\x1b[0m\r\n');
-          } else {
-            pane.term.write('\r\n\x1b[33mShell process exited.\x1b[0m\r\n');
-          }
-          cleanupPane(pane);
-          break;
-        case 'connection_status':
-          if (msg.status === 'reconnecting') {
-            pane.term.write(`\r\n\x1b[33m⚠ Connection lost. Retrying (${msg.attempt}/${msg.maxAttempts})...\x1b[0m\r\n`);
-          }
-          break;
-        case 'session_dead':
-          pane.term.write('\r\n\x1b[31mConnection lost. Please refresh the page.\x1b[0m\r\n');
-          cleanupPane(pane);
-          break;
       }
+
+      async destroy() {
+        this.alive = false;
+        if (this.sessionId) {
+          try {
+            navigator.sendBeacon(
+              '/api/session/close',
+              JSON.stringify({ session_id: this.sessionId })
+            );
+          } catch (e) { /* best effort */ }
+          this.sessionId = null;
+        }
+        if (this.term) {
+          this.term.dispose();
+          this.term = null;
+        }
+        if (this.element && this.element.parentNode) {
+          this.element.parentNode.removeChild(this.element);
+          this.element = null;
+        }
+      }
+
+      focus() {
+        if (this.term) this.term.focus();
+      }
+    }
+
+    /* ===== LayoutManager: handles layout switching, pane lifecycle, polling ===== */
+    const LAYOUTS = {
+      single:  { slots: 1 },
+      hsplit:  { slots: 2 },
+      vsplit:  { slots: 2 },
+      quad:    { slots: 4 },
+      six:     { slots: 6 },
+      nine:    { slots: 9 },
+      twelve:  { slots: 12 },
+      sixteen: { slots: 16 },
+      twenty:  { slots: 20 },
     };
 
-    // Switch worker to background/foreground on visibility change
-    document.addEventListener('visibilitychange', () => {
-      pollWorker.postMessage({ type: 'visibility_change', hidden: document.hidden });
-    });
+    // Adaptive polling intervals (ms)
+    const POLL_FOCUSED = 100;    // Focused pane — fast updates
+    const POLL_UNFOCUSED = 500;  // Visible but unfocused panes
+    const POLL_HIDDEN = 2000;    // Browser tab is hidden
 
-    // sendBeacon heartbeat on pagehide as safety net before Worker dies
-    window.addEventListener('pagehide', () => {
-      panes.forEach(p => {
-        if (p.sessionId) {
-          navigator.sendBeacon(
-            '/api/heartbeat',
-            new Blob([JSON.stringify({ session_id: p.sessionId })], { type: 'application/json' })
-          );
+    class LayoutManager {
+      constructor() {
+        this.currentLayout = 'single';
+        this.panes = new Map();      // slotIndex -> TerminalPane | null
+        this.focusedSlot = 0;
+        this.pollTimer = null;
+        this.pollInterval = POLL_FOCUSED;
+        this.container = document.getElementById('pane-container');
+      }
+
+      async init() {
+        // Set up layout buttons
+        document.querySelectorAll('.layout-btn').forEach(btn => {
+          btn.addEventListener('click', () => this.setLayout(btn.dataset.layout));
+        });
+
+        // Keyboard shortcut: Ctrl+Shift+N to cycle focus
+        document.addEventListener('keydown', (e) => {
+          if (e.ctrlKey && e.shiftKey && (e.key === 'N' || e.key === 'n')) {
+            e.preventDefault();
+            this.cycleFocus();
+          }
+        });
+
+        // Debounced resize handler
+        let resizeTimeout = null;
+        window.addEventListener('resize', () => {
+          if (resizeTimeout) clearTimeout(resizeTimeout);
+          resizeTimeout = setTimeout(() => this.handleResize(), 200);
+        });
+
+        // Adaptive polling: slow down when tab is hidden
+        document.addEventListener('visibilitychange', () => {
+          this.updatePollRate();
+        });
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => this.cleanup());
+
+        // Check for existing tmux sessions to restore
+        await this.restoreOrCreate();
+
+        // Start adaptive batch polling
+        this.startPolling();
+
+        this.updateIndicators();
+      }
+
+      async restoreOrCreate() {
+        // Load saved layout from localStorage
+        const savedLayout = localStorage.getItem('terminal-layout');
+        const savedPanes = localStorage.getItem('terminal-panes');
+
+        // Query server for existing tmux sessions
+        let existingSessions = [];
+        try {
+          const resp = await fetch('/api/tmux-sessions');
+          const data = await resp.json();
+          existingSessions = data.sessions || [];
+        } catch (e) { /* ignore */ }
+
+        if (existingSessions.length > 0) {
+          // Restore: determine layout from number of sessions
+          let layout = savedLayout || 'single';
+          if (!savedLayout) {
+            if (existingSessions.length === 1) layout = 'single';
+            else if (existingSessions.length === 2) layout = 'hsplit';
+            else if (existingSessions.length <= 4) layout = 'quad';
+            else if (existingSessions.length <= 6) layout = 'six';
+            else if (existingSessions.length <= 9) layout = 'nine';
+            else if (existingSessions.length <= 12) layout = 'twelve';
+            else if (existingSessions.length <= 16) layout = 'sixteen';
+            else layout = 'twenty';
+          }
+          await this.setLayout(layout);
+
+          // Create panes for each existing tmux session
+          for (const paneId of existingSessions) {
+            if (paneId < LAYOUTS[this.currentLayout].slots) {
+              await this.createPaneInSlot(paneId);
+            }
+          }
+          this.setFocus(existingSessions[0] || 0);
+        } else {
+          // Fresh start: single pane
+          if (savedLayout) {
+            await this.setLayout(savedLayout);
+          }
+          await this.createPaneInSlot(0);
+          this.setFocus(0);
         }
-      });
-    });
-
-    function cleanupPane(pane) {
-      pollWorker.postMessage({ type: 'stop_poll', paneId: pane.id });
-      if (pane.sessionId) {
-        navigator.sendBeacon('/api/session/close', JSON.stringify({ session_id: pane.sessionId }));
-        pane.sessionId = null;
-      }
-    }
-
-    function cleanupAllPanes() {
-      panes.forEach(p => cleanupPane(p));
-    }
-
-    // ── Pane Management ────────────────────────────────────────────
-    async function createPane() {
-      const id = 'pane-' + (++paneIdCounter);
-      const container = document.getElementById('pane-container');
-      const element = document.createElement('div');
-      element.className = 'pane';
-      element.id = id;
-
-      // Add divider before second pane
-      if (panes.length === 1) {
-        const divider = document.createElement('div');
-        divider.id = 'pane-divider';
-        container.appendChild(divider);
-        setupDividerDrag(divider);
       }
 
-      container.appendChild(element);
-
-      const term = new Terminal({
-        cursorBlink: true,
-        fontSize: currentFontSize,
-        fontFamily: fontFamilies[currentFontFamily] || 'monospace',
-        theme: themes[currentThemeName].theme
-      });
-
-      const fitAddon = new FitAddon.FitAddon();
-      term.loadAddon(fitAddon);
-      term.loadAddon(new WebLinksAddon.WebLinksAddon());
-
-      let searchAddon = null;
-      if (typeof SearchAddon !== 'undefined') {
-        searchAddon = new SearchAddon.SearchAddon();
-        term.loadAddon(searchAddon);
+      saveState() {
+        localStorage.setItem('terminal-layout', this.currentLayout);
+        const paneIds = this.getActivePaneIndices();
+        localStorage.setItem('terminal-panes', JSON.stringify(paneIds));
       }
 
-      if (typeof ImageAddon !== 'undefined' && ImageAddon.ImageAddon) {
-        term.loadAddon(new ImageAddon.ImageAddon({
-          sixelSupport: true,
-          sixelScrolling: true,
-          iipSupport: true,
-          enableSizeReports: true,
-          storageLimit: 128
-        }));
+      startPolling() {
+        if (this.pollTimer) clearInterval(this.pollTimer);
+        this.pollTimer = setInterval(() => this.batchPoll(), this.pollInterval);
       }
 
-      term.open(element);
-      fitAddon.fit();
-
-      const sid = await createSession();
-      await sendResize(term.cols, term.rows, sid);
-
-      term.write('\x1b[32mConnected. Type "claude" to start coding.\x1b[0m\r\n');
-      term.write('\x1b[90mProjects in ~/projects auto-sync to Workspace on git commit.\x1b[0m\r\n');
-      term.write('\x1b[90mCtrl+Shift+D split pane \u2502 Ctrl+Shift+W close pane \u2502 Ctrl+Shift+] switch pane\x1b[0m\r\n\r\n');
-
-      const pane = { id, element, term, fitAddon, searchAddon, sessionId: sid };
-      term.onData(data => sendInput(data, pane.sessionId));
-      pollWorker.postMessage({ type: 'start_poll', paneId: id, sessionId: sid });
-
-      // Click to focus
-      element.addEventListener('mousedown', () => focusPane(id));
-
-      panes.push(pane);
-      focusPane(id);
-
-      return pane;
-    }
-
-    async function splitPane() {
-      if (panes.length >= 2) return;
-      status.textContent = 'Splitting...';
-      status.style.display = '';
-      try {
-        await createPane();
-        // Reset flex for even split
-        panes.forEach(p => { p.element.style.flex = '1'; });
-        refitAllPanes();
-        updatePaneButtons();
-        status.style.display = 'none';
-      } catch (e) {
-        status.textContent = 'Split failed: ' + e.message;
-        status.style.color = '#ff5555';
-      }
-    }
-
-    function closeActivePane() {
-      if (panes.length <= 1) return;
-      const ap = getActivePane();
-      if (!ap) return;
-
-      cleanupPane(ap);
-      ap.term.dispose();
-      ap.element.remove();
-
-      // Remove divider
-      const divider = document.getElementById('pane-divider');
-      if (divider) divider.remove();
-
-      panes = panes.filter(p => p.id !== ap.id);
-
-      // Reset remaining pane to full width
-      if (panes.length === 1) {
-        panes[0].element.style.flex = '1';
-      }
-
-      focusPane(panes[0].id);
-      refitAllPanes();
-      updatePaneButtons();
-    }
-
-    function cyclePaneFocus(direction) {
-      if (panes.length <= 1) return;
-      const idx = panes.findIndex(p => p.id === activePaneId);
-      const next = direction === 'next'
-        ? (idx + 1) % panes.length
-        : (idx - 1 + panes.length) % panes.length;
-      focusPane(panes[next].id);
-    }
-
-    // ── Divider Drag ───────────────────────────────────────────────
-    function setupDividerDrag(divider) {
-      let dragging = false;
-
-      divider.addEventListener('mousedown', e => {
-        e.preventDefault();
-        dragging = true;
-        divider.classList.add('dragging');
-        document.body.style.cursor = 'col-resize';
-        document.body.style.userSelect = 'none';
-      });
-
-      document.addEventListener('mousemove', e => {
-        if (!dragging || panes.length < 2) return;
-        const container = document.getElementById('pane-container');
-        const rect = container.getBoundingClientRect();
-        let pct = ((e.clientX - rect.left) / rect.width) * 100;
-        pct = Math.max(15, Math.min(85, pct));
-        panes[0].element.style.flex = `0 0 ${pct}%`;
-        panes[1].element.style.flex = '1 1 0';
-        refitAllPanes();
-      });
-
-      document.addEventListener('mouseup', () => {
-        if (dragging) {
-          dragging = false;
-          divider.classList.remove('dragging');
-          document.body.style.cursor = '';
-          document.body.style.userSelect = '';
-          refitAllPanes();
+      updatePollRate() {
+        const newInterval = document.hidden ? POLL_HIDDEN : POLL_FOCUSED;
+        if (newInterval !== this.pollInterval) {
+          this.pollInterval = newInterval;
+          this.startPolling();
         }
-      });
+      }
+
+      async setLayout(layout) {
+        if (!LAYOUTS[layout]) return;
+        this.currentLayout = layout;
+        const slotCount = LAYOUTS[layout].slots;
+
+        // Update container CSS class
+        this.container.className = 'layout-' + layout;
+
+        // Update toolbar buttons
+        document.querySelectorAll('.layout-btn').forEach(btn => {
+          btn.classList.toggle('active', btn.dataset.layout === layout);
+        });
+
+        // Rebuild the container with correct number of slots
+        this.container.innerHTML = '';
+
+        for (let i = 0; i < slotCount; i++) {
+          const pane = this.panes.get(i);
+          if (pane && pane.element) {
+            this.container.appendChild(pane.element);
+          } else {
+            // Empty slot -- show add button
+            this.addEmptySlot(i);
+          }
+        }
+
+        // Fit all active panes after layout change
+        await new Promise(r => requestAnimationFrame(r));
+        for (const [idx, pane] of this.panes) {
+          if (pane && idx < slotCount) {
+            pane.fit();
+            pane.sendResize();
+          }
+        }
+
+        // Ensure focus is on a visible slot
+        if (this.focusedSlot >= slotCount) {
+          const activePanes = this.getActivePaneIndices();
+          this.setFocus(activePanes.length > 0 ? activePanes[0] : 0);
+        }
+
+        this.updateIndicators();
+        this.saveState();
+      }
+
+      addEmptySlot(index) {
+        const slot = document.createElement('div');
+        slot.className = 'pane-slot pane-slot-empty';
+        slot.dataset.slot = index;
+        const btn = document.createElement('button');
+        btn.className = 'add-pane-btn';
+        btn.textContent = '+';
+        btn.title = 'Open terminal in this slot';
+        btn.addEventListener('click', () => this.createPaneInSlot(index));
+        slot.appendChild(btn);
+        this.container.appendChild(slot);
+      }
+
+      async createPaneInSlot(index) {
+        // Remove empty slot element if present
+        const existing = this.container.querySelector(`.pane-slot-empty[data-slot="${index}"]`);
+        if (existing) existing.remove();
+
+        // Also remove any existing pane in this slot
+        const oldPane = this.panes.get(index);
+        if (oldPane) await oldPane.destroy();
+
+        const pane = new TerminalPane(index);
+        this.panes.set(index, pane);
+        await pane.init(this.container);
+
+        // Reorder DOM children to match slot order
+        this.reorderSlots();
+
+        this.setFocus(index);
+        this.updateIndicators();
+        this.saveState();
+      }
+
+      reorderSlots() {
+        const slotCount = LAYOUTS[this.currentLayout].slots;
+        const children = Array.from(this.container.children);
+        children.sort((a, b) => {
+          return parseInt(a.dataset.slot || '0') - parseInt(b.dataset.slot || '0');
+        });
+        children.forEach(child => this.container.appendChild(child));
+      }
+
+      async closePane(index) {
+        const pane = this.panes.get(index);
+        if (pane) {
+          await pane.destroy();
+          this.panes.delete(index);
+        }
+
+        // If no active panes remain, auto-create one in slot 0
+        if (this.getActivePaneIndices().length === 0) {
+          this.setLayout('single');
+          await this.createPaneInSlot(0);
+          return;
+        }
+
+        // Replace with empty slot in current layout
+        this.addEmptySlot(index);
+        this.reorderSlots();
+
+        // Move focus if the closed pane was focused
+        if (this.focusedSlot === index) {
+          const active = this.getActivePaneIndices();
+          if (active.length > 0) this.setFocus(active[0]);
+        }
+
+        this.updateIndicators();
+        this.saveState();
+      }
+
+      getActivePaneIndices() {
+        const slotCount = LAYOUTS[this.currentLayout].slots;
+        const indices = [];
+        for (const [idx, pane] of this.panes) {
+          if (pane && idx < slotCount) indices.push(idx);
+        }
+        return indices.sort((a, b) => a - b);
+      }
+
+      setFocus(index) {
+        this.focusedSlot = index;
+        // Update visual indicators
+        this.container.querySelectorAll('.pane-slot').forEach(el => {
+          el.classList.toggle('focused', parseInt(el.dataset.slot) === index);
+        });
+        // Focus the terminal
+        const pane = this.panes.get(index);
+        if (pane) pane.focus();
+        this.updateIndicators();
+      }
+
+      getFocusedPane() {
+        return this.panes.get(this.focusedSlot) || null;
+      }
+
+      cycleFocus() {
+        const active = this.getActivePaneIndices();
+        if (active.length <= 1) return;
+        const currentIdx = active.indexOf(this.focusedSlot);
+        const nextIdx = (currentIdx + 1) % active.length;
+        this.setFocus(active[nextIdx]);
+      }
+
+      handleResize() {
+        for (const [idx, pane] of this.panes) {
+          if (pane && idx < LAYOUTS[this.currentLayout].slots) {
+            pane.fit();
+            pane.sendResize();
+          }
+        }
+      }
+
+      async batchPoll() {
+        const sessionIds = [];
+        const paneMap = new Map(); // sessionId -> pane
+
+        for (const [idx, pane] of this.panes) {
+          if (pane && pane.sessionId && pane.alive) {
+            sessionIds.push(pane.sessionId);
+            paneMap.set(pane.sessionId, pane);
+          }
+        }
+
+        // Skip if no active sessions
+        if (sessionIds.length === 0) return;
+
+        try {
+          const resp = await fetch('/api/output-batch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ session_ids: sessionIds })
+          });
+
+          if (!resp.ok) return;
+          const data = await resp.json();
+
+          for (const [sid, result] of Object.entries(data.outputs || {})) {
+            const pane = paneMap.get(sid);
+            if (!pane) continue;
+            if (result.output) pane.writeOutput(result.output);
+            if (result.exited) pane.markExited();
+          }
+        } catch (e) {
+          console.error('Batch poll error:', e);
+        }
+      }
+
+      updateIndicators() {
+        const container = document.getElementById('pane-indicators');
+        const slotCount = LAYOUTS[this.currentLayout].slots;
+        container.innerHTML = '';
+        for (let i = 0; i < slotCount; i++) {
+          const dot = document.createElement('div');
+          dot.className = 'pane-dot';
+          const pane = this.panes.get(i);
+          if (pane) dot.classList.add('active');
+          if (i === this.focusedSlot && pane) dot.classList.add('focused');
+          container.appendChild(dot);
+        }
+      }
+
+      cleanup() {
+        if (this.pollTimer) {
+          clearInterval(this.pollTimer);
+          this.pollTimer = null;
+        }
+        for (const [idx, pane] of this.panes) {
+          if (pane) pane.destroy();
+        }
+        this.panes.clear();
+      }
     }
 
-    // ── Pane toolbar buttons ────────────────────────────────────────
-    document.getElementById('split-btn').addEventListener('click', () => splitPane());
-    document.getElementById('close-pane-btn').addEventListener('click', () => closeActivePane());
-    document.getElementById('next-pane-btn').addEventListener('click', () => cyclePaneFocus('next'));
-
-    function updatePaneButtons() {
-      const multi = panes.length > 1;
-      document.getElementById('close-pane-btn').style.display = multi ? '' : 'none';
-      document.getElementById('next-pane-btn').style.display = multi ? '' : 'none';
-      document.getElementById('split-btn').style.display = panes.length >= 2 ? 'none' : '';
-    }
-
-    // ── Toast Notification ──────────────────────────────────────────
+    /* ===== Toast Notification ===== */
     function showToast(message, type = 'info') {
       const toast = document.createElement('div');
       toast.textContent = message;
@@ -952,66 +706,55 @@
       }, 3000);
     }
 
-    // ── Clipboard Paste (image upload) ─────────────────────────────
-    // Use capture phase (3rd arg = true) so we fire BEFORE xterm.js consumes the event
+    /* ===== Clipboard Paste (image upload) ===== */
     document.addEventListener('paste', async (e) => {
-      const active = getActivePane();
-      if (!active || !active.sessionId) {
-        console.log('[paste] No active pane or session');
-        return;
-      }
+      const pane = layoutManager.getFocusedPane();
+      if (!pane || !pane.sessionId) return;
 
       const items = e.clipboardData?.items;
-      if (!items) {
-        console.log('[paste] No clipboardData items');
-        return;
-      }
-
-      console.log('[paste] Items:', Array.from(items).map(i => i.type));
+      if (!items) return;
 
       for (const item of items) {
         if (item.type.startsWith('image/')) {
           e.preventDefault();
           const blob = item.getAsFile();
-          if (!blob) { console.log('[paste] Could not get file from item'); continue; }
+          if (!blob) continue;
 
-          console.log('[paste] Uploading image:', blob.type, blob.size, 'bytes');
           const ext = item.type.split('/')[1] || 'png';
           const formData = new FormData();
           formData.append('file', blob, `clipboard-${Date.now()}.${ext}`);
 
           try {
             const resp = await fetch('/api/upload', { method: 'POST', body: formData });
-            console.log('[paste] Response status:', resp.status);
             if (!resp.ok) {
-              const text = await resp.text();
-              console.error('[paste] Upload failed:', resp.status, text);
               showToast(`Upload failed (${resp.status})`, 'error');
               return;
             }
             const data = await resp.json();
             if (data.path) {
-              sendInput(data.path + ' ', active.sessionId);
+              fetch('/api/input', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ session_id: pane.sessionId, input: data.path + ' ' })
+              });
               showToast('Image saved: ' + data.path);
             } else if (data.error) {
               showToast('Upload error: ' + data.error, 'error');
             }
           } catch (err) {
-            console.error('[paste] Upload exception:', err);
             showToast('Upload failed: ' + err.message, 'error');
           }
           return;
         }
       }
-      // Text paste — xterm handles natively
     }, true);  // capture phase
 
-    // ── Drag-and-Drop (image upload fallback) ──────────────────────
+    /* ===== Drag-and-Drop (image upload) ===== */
     document.addEventListener('dragover', (e) => e.preventDefault());
     document.addEventListener('drop', async (e) => {
       e.preventDefault();
-      const active = getActivePane();
-      if (!active || !active.sessionId) return;
+      const pane = layoutManager.getFocusedPane();
+      if (!pane || !pane.sessionId) return;
 
       for (const file of e.dataTransfer.files) {
         if (!file.type.startsWith('image/')) continue;
@@ -1021,28 +764,31 @@
 
         try {
           const resp = await fetch('/api/upload', { method: 'POST', body: formData });
-          console.log('[drop] Response status:', resp.status);
           if (!resp.ok) {
-            const text = await resp.text();
-            console.error('[drop] Upload failed:', resp.status, text);
             showToast(`Upload failed (${resp.status})`, 'error');
             continue;
           }
           const data = await resp.json();
           if (data.path) {
-            sendInput(data.path + ' ', active.sessionId);
+            fetch('/api/input', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ session_id: pane.sessionId, input: data.path + ' ' })
+            });
             showToast('Image saved: ' + data.path);
           } else if (data.error) {
             showToast('Upload error: ' + data.error, 'error');
           }
         } catch (err) {
-          console.error('[drop] Upload exception:', err);
           showToast('Upload failed: ' + err.message, 'error');
         }
       }
     });
 
-    // ── Init ───────────────────────────────────────────────────────
+    /* ===== Init ===== */
+    const layoutManager = new LayoutManager();
+    const status = document.getElementById('status');
+
     async function init() {
       try {
         status.textContent = 'Initializing terminal...';
@@ -1050,14 +796,10 @@
         if (typeof Terminal === 'undefined') throw new Error('xterm.js not loaded');
         if (typeof FitAddon === 'undefined') throw new Error('FitAddon not loaded');
 
-        await createPane();
+        await layoutManager.init();
 
         status.textContent = 'Connected!';
         setTimeout(() => { status.style.display = 'none'; }, 1000);
-
-        window.addEventListener('resize', () => refitAllPanes());
-        window.addEventListener('beforeunload', () => cleanupAllPanes());
-
       } catch (e) {
         status.textContent = 'Error: ' + e.message;
         status.style.color = '#ff5555';
