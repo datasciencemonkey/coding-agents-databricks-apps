@@ -2,9 +2,9 @@ import os
 
 bind = f"0.0.0.0:{os.environ.get('DATABRICKS_APP_PORT', '8000')}"
 workers = 1          # PTY fds + sessions dict are process-local
-threads = 8          # Concurrent request handling (poll + input + resize)
+threads = 8          # Concurrent request handling (poll + input + resize + websocket)
 worker_class = "gthread"
-timeout = 30
+timeout = 120        # WebSocket connections are long-lived; 30s was too aggressive
 graceful_timeout = 10  # Databricks gives 15s after SIGTERM
 accesslog = "-"
 errorlog = "-"
