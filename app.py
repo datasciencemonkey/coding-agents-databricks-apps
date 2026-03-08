@@ -362,6 +362,13 @@ def _setup_git_config():
         f.write('if ! cd . 2>/dev/null; then\n')
         f.write('    cd ~/projects 2>/dev/null || cd ~\n')
         f.write("fi\n\n")
+        # Strip OAuth M2M vars when PAT is configured — Databricks SDK rejects
+        # ambiguous auth ("more than one authorization method configured").
+        # This must be in .bashrc (not just shell_env) because tmux server
+        # may preserve the original process environment across reattach.
+        if os.environ.get("DATABRICKS_TOKEN"):
+            f.write("# Strip OAuth M2M vars to avoid SDK auth conflict with PAT\n")
+            f.write("unset DATABRICKS_CLIENT_ID DATABRICKS_CLIENT_SECRET 2>/dev/null\n\n")
         f.write("# Colored prompt: user@host:dir$\n")
         f.write(
             "PS1='\\[\\033[01;32m\\]\\u@\\h\\[\\033[00m\\]:\\[\\033[01;34m\\]\\w\\[\\033[00m\\]\\$ '\n"
