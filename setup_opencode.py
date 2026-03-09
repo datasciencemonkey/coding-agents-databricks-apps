@@ -198,11 +198,6 @@ else:
 opencode_config_dir = home / ".config" / "opencode"
 opencode_config_dir.mkdir(parents=True, exist_ok=True)
 
-# Databricks MCP server paths (installed by setup_databricks_mcp.py in parallel)
-ai_dev_kit_dir = home / ".ai-dev-kit"
-dbx_mcp_python = str(ai_dev_kit_dir / ".venv" / "bin" / "python")
-dbx_mcp_server = str(ai_dev_kit_dir / "repo" / "databricks-mcp-server" / "run_server.py")
-
 opencode_config = {
     "$schema": "https://opencode.ai/config.json",
     "enabled_providers": ["databricks"],
@@ -218,15 +213,6 @@ opencode_config = {
             "url": "https://mcp.exa.ai/mcp",
             "enabled": True,
         },
-        "databricks": {
-            "type": "local",
-            "command": [dbx_mcp_python, dbx_mcp_server],
-            "environment": {
-                "DATABRICKS_HOST": host,
-                "DATABRICKS_TOKEN": token,
-            },
-            "enabled": True,
-        },
     },
 }
 
@@ -235,7 +221,7 @@ config_path.write_text(json.dumps(opencode_config, indent=2))
 logger.info(f"OpenCode configured: {config_path}")
 logger.info("  Provider: databricks (native, auto-discovers models)")
 logger.info(f"  Default model: databricks/{anthropic_model}")
-logger.info("  MCP servers: deepwiki, exa, databricks")
+logger.info("  MCP servers: deepwiki, exa")
 
 logger.info(f"OpenCode ready! Default model: {anthropic_model}")
 logger.info("  opencode                          # Start OpenCode TUI")
