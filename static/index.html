@@ -268,8 +268,9 @@
           if (!this.sessionId) return;
           // Drop OSC responses: \x1b] ... \x1b\ or \x1b] ... \x07
           if (/\x1b\]/.test(input)) return;
-          // Use WebSocket if connected, else HTTP fallback
-          if (window._wsConnected && window._socket) {
+          // Use true WebSocket if available, else HTTP POST (always prefer HTTP
+          // over SocketIO long-polling — simpler and lower overhead)
+          if (window._wsRealWebSocket && window._socket) {
             window._socket.emit('terminal_input', { session_id: this.sessionId, input: input });
           } else {
             fetch('/api/input', {
@@ -283,7 +284,7 @@
 
       async sendResize() {
         if (!this.sessionId || !this.term) return;
-        if (window._wsConnected && window._socket) {
+        if (window._wsRealWebSocket && window._socket) {
           window._socket.emit('terminal_resize', {
             session_id: this.sessionId,
             cols: this.term.cols,
@@ -371,7 +372,7 @@
     };
 
     // Adaptive polling intervals (ms)
-    const POLL_FOCUSED = 100;    // Focused pane — fast updates
+    const POLL_FOCUSED = 50;     // Focused pane — fast updates
     const POLL_UNFOCUSED = 500;  // Visible but unfocused panes
     const POLL_HIDDEN = 2000;    // Browser tab is hidden
 
@@ -432,28 +433,49 @@
           return;
         }
 
+        // Try WebSocket first, fall back to long-polling
         const socket = io({ transports: ['websocket', 'polling'] });
         window._socket = socket;
         window._wsConnected = false;
+        window._wsRealWebSocket = false;  // true only when using real WebSocket transport
 
         socket.on('connect', () => {
-          console.log('[ws] Connected');
+          const transport = socket.io.engine.transport.name;
+          console.log('[ws] Connected via', transport);
           window._wsConnected = true;
-          // Re-join rooms for all active panes and stop HTTP polling
+          window._wsRealWebSocket = (transport === 'websocket');
+
+          // Re-join rooms for all active panes
           for (const [idx, pane] of this.panes) {
             if (pane && pane.sessionId) {
               socket.emit('join_session', { session_id: pane.sessionId });
             }
           }
-          if (this.pollTimer) {
+
+          // Only stop HTTP polling when on true WebSocket — SocketIO long-polling
+          // has more overhead than our simple batch poll
+          if (window._wsRealWebSocket && this.pollTimer) {
             clearInterval(this.pollTimer);
             this.pollTimer = null;
           }
         });
 
+        // Detect transport upgrade (long-polling → WebSocket)
+        socket.io.on('open', () => {
+          socket.io.engine.on('upgrade', () => {
+            console.log('[ws] Upgraded to WebSocket');
+            window._wsRealWebSocket = true;
+            if (this.pollTimer) {
+              clearInterval(this.pollTimer);
+              this.pollTimer = null;
+            }
+          });
+        });
+
         socket.on('disconnect', (reason) => {
           console.log('[ws] Disconnected:', reason);
           window._wsConnected = false;
+          window._wsRealWebSocket = false;
           // Fall back to HTTP polling
           this.startPolling();
         });
@@ -461,11 +483,14 @@
         socket.on('connect_error', (err) => {
           console.log('[ws] Connection error:', err.message);
           window._wsConnected = false;
+          window._wsRealWebSocket = false;
           if (!this.pollTimer) this.startPolling();
         });
 
-        // Receive terminal output pushed from server
+        // Receive terminal output pushed from server — only use when on true
+        // WebSocket; when on long-polling, batch HTTP poll handles output
         socket.on('terminal_output', (data) => {
+          if (!window._wsRealWebSocket) return;
           for (const [idx, pane] of this.panes) {
             if (pane && pane.sessionId === data.session_id && data.output) {
               pane.writeOutput(data.output);
@@ -473,7 +498,7 @@
           }
         });
 
-        // Receive session exited notification
+        // Receive session exited notification (always handle, lightweight)
         socket.on('session_exited', (data) => {
           for (const [idx, pane] of this.panes) {
             if (pane && pane.sessionId === data.session_id) {
