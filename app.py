@@ -596,7 +596,10 @@ def cleanup_stale_sessions():
         warning_threshold = SESSION_TIMEOUT_SECONDS * 0.8
 
         with sessions_lock:
-            for session_id, session in sessions.items():
+            session_snapshot = list(sessions.items())
+
+        for session_id, session in session_snapshot:
+            with session["lock"]:
                 idle = now - session["last_poll_time"]
                 if idle > SESSION_TIMEOUT_SECONDS:
                     stale_sessions.append((session_id, session["pid"], session["master_fd"]))
@@ -828,22 +831,31 @@ def get_output_batch():
     outputs = {}
     now = time.time()
 
+    # Step 1: Resolve session refs under global lock (fast dict lookups only)
+    resolved = {}
     with sessions_lock:
         for sid in session_ids:
-            if sid not in sessions:
-                continue
-            session = sessions[sid]
+            if sid in sessions:
+                resolved[sid] = sessions[sid]
+
+    # Step 2: Swap buffers under per-session locks (same pattern as get_output)
+    swapped = {}
+    for sid, session in resolved.items():
+        with session["lock"]:
             session["last_poll_time"] = now
-            buffer = session["output_buffer"]
-            output = "".join(buffer)
-            buffer.clear()
+            old_buffer = session["output_buffer"]
+            session["output_buffer"] = deque(maxlen=1000)
             exited = session.get("exited", False)
             timeout_warning = session.pop("timeout_warning", False)
-            outputs[sid] = {
-                "output": output,
-                "exited": exited,
-                "timeout_warning": timeout_warning
-            }
+        swapped[sid] = (old_buffer, exited, timeout_warning)
+
+    # Step 3: Join strings outside all locks
+    for sid, (old_buffer, exited, timeout_warning) in swapped.items():
+        outputs[sid] = {
+            "output": "".join(old_buffer),
+            "exited": exited,
+            "timeout_warning": timeout_warning,
+        }
 
     return jsonify({"outputs": outputs, "shutting_down": shutting_down})
 
