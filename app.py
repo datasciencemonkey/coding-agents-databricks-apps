@@ -28,6 +28,10 @@ SESSION_TIMEOUT_SECONDS = 120  # No poll for 120s = dead PTY wrapper (tmux persi
 CLEANUP_INTERVAL_SECONDS = 30  # How often to check for stale sessions
 GRACEFUL_SHUTDOWN_WAIT = 3  # Seconds to wait after SIGHUP before SIGKILL
 
+# Terminal mode configuration
+TMUX_ENABLED = os.environ.get('TMUX_ENABLED', 'true').lower() == 'true'
+TERMINAL_MODE = os.environ.get('TERMINAL_MODE', 'tabs')
+
 # Logging setup
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -169,7 +173,10 @@ def _update_step(step_id, **kwargs):
 
 def _get_setup_state_snapshot():
     with setup_lock:
-        return copy.deepcopy(setup_state)
+        snapshot = copy.deepcopy(setup_state)
+    snapshot['terminal_mode'] = TERMINAL_MODE
+    snapshot['tmux_enabled'] = TMUX_ENABLED
+    return snapshot
 
 
 # Single-user security: only the token owner can access the terminal
@@ -762,8 +769,8 @@ def cleanup_stale_sessions():
 @app.before_request
 def authorize_request():
     """Check authorization before processing any request."""
-    # Skip auth for health check and setup status
-    if request.path in ("/health", "/api/setup-status"):
+    # Skip auth for health check, setup status, and active sessions
+    if request.path in ("/health", "/api/setup-status", "/api/active-sessions"):
         return None
 
     authorized, user = check_authorization()
@@ -851,6 +858,32 @@ def list_tmux_sessions():
         return jsonify({"sessions": []})
 
 
+@app.route("/api/active-sessions")
+def list_active_sessions():
+    """List active PTY sessions for reconnection (non-tmux mode).
+
+    Returns: {"sessions": [{"session_id": "...", "pane_id": N, "alive": bool}, ...]}
+    Filters out sessions whose process has exited.
+    """
+    result = []
+    with sessions_lock:
+        for session_id, session in sessions.items():
+            pid = session.get("pid")
+            alive = False
+            if pid is not None:
+                try:
+                    os.kill(pid, 0)  # Check if process is still running
+                    alive = not session.get("exited", False)
+                except OSError:
+                    alive = False
+            result.append({
+                "session_id": session_id,
+                "pane_id": session.get("pane_id", 0),
+                "alive": alive,
+            })
+    return jsonify({"sessions": result})
+
+
 @app.route("/api/session", methods=["POST"])
 def create_session():
     """Create a new terminal session."""
@@ -860,7 +893,7 @@ def create_session():
             return jsonify({"error": "Maximum session limit reached"}), 503
 
     try:
-        data = request.json or {}
+        data = request.get_json(silent=True) or {}
         pane_id = int(data.get("pane_id", 0))
 
         master_fd, slave_fd = pty.openpty()
@@ -892,9 +925,11 @@ def create_session():
 
         # Use tmux for session persistence across page refreshes.
         # tmux new-session -A: attach if session exists, create if not.
+        # Re-read TMUX_ENABLED at request time so tests can toggle it via env.
+        tmux_enabled_now = os.environ.get('TMUX_ENABLED', 'true').lower() == 'true'
         tmux_session = f"pane-{pane_id}"
         reattached = False
-        if shutil.which("tmux"):
+        if tmux_enabled_now and shutil.which("tmux"):
             # Check if this tmux session already exists (reattach vs new)
             check = subprocess.run(
                 ["tmux", "has-session", "-t", tmux_session],
@@ -922,6 +957,7 @@ def create_session():
             sessions[session_id] = {
                 "master_fd": master_fd,
                 "pid": pid,
+                "pane_id": pane_id,
                 "output_buffer": deque(maxlen=1000),
                 "last_poll_time": time.time(),
                 "created_at": time.time(),
