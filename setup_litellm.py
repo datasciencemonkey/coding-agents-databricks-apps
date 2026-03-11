@@ -96,6 +96,9 @@ litellm_config = {
             }
         },
     ],
+    "litellm_settings": {
+        "drop_params": True,  # Drop unsupported params instead of erroring
+    },
     "general_settings": {
         "master_key": None,  # No auth needed for localhost-only proxy
     }
@@ -121,8 +124,6 @@ proc = subprocess.Popen(
         "--config", str(config_path),
         "--host", LITELLM_HOST,
         "--port", str(LITELLM_PORT),
-        "--detailed_debug", "false",
-        "--drop_params",  # Drop unsupported params instead of erroring
     ],
     stdout=open(log_path, "w"),
     stderr=subprocess.STDOUT,
