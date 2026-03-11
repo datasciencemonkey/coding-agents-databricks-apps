@@ -1,3 +1,6 @@
 command:
-  - python
-  - app.py
+  - gunicorn
+  - app:app
+env:
+  - name: ADMIN_TOKEN
+    valueFrom: ADMIN_TOKEN
