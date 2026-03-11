@@ -31,22 +31,36 @@ if not os.environ.get("HOME") or os.environ["HOME"] == "/":
 
 home = Path(os.environ["HOME"])
 
-# Kill any existing proxy (from previous deploy) before starting new one
-pid_path = home / ".content-filter-proxy.pid"
-if pid_path.exists():
-    try:
-        old_pid = int(pid_path.read_text().strip())
-        os.kill(old_pid, signal.SIGTERM)
+# Kill any existing proxy on our port (more reliable than PID file)
+try:
+    result = subprocess.run(
+        ["fuser", "-k", f"{PROXY_PORT}/tcp"],
+        capture_output=True, text=True, timeout=5
+    )
+    if result.returncode == 0:
+        print(f"Killed previous process on port {PROXY_PORT}")
         time.sleep(1)
-        # Force kill if still running
-        try:
-            os.kill(old_pid, signal.SIGKILL)
-        except ProcessLookupError:
-            pass
-        print(f"Killed previous proxy (PID: {old_pid})")
-    except (ValueError, ProcessLookupError, PermissionError):
+except (FileNotFoundError, subprocess.TimeoutExpired):
+    # fuser not available, try lsof
+    try:
+        result = subprocess.run(
+            ["lsof", "-ti", f":{PROXY_PORT}"],
+            capture_output=True, text=True, timeout=5
+        )
+        for pid in result.stdout.strip().split():
+            try:
+                os.kill(int(pid), signal.SIGKILL)
+                print(f"Killed previous proxy (PID: {pid})")
+            except (ValueError, ProcessLookupError):
+                pass
+        if result.stdout.strip():
+            time.sleep(1)
+    except (FileNotFoundError, subprocess.TimeoutExpired):
         pass
-    pid_path.unlink(missing_ok=True)
+
+# Clean up stale PID file
+pid_path = home / ".content-filter-proxy.pid"
+pid_path.unlink(missing_ok=True)
 
 # Databricks configuration
 gateway_host = ensure_https(os.environ.get("DATABRICKS_GATEWAY_HOST", "").rstrip("/"))
