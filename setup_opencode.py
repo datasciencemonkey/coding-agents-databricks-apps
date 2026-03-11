@@ -1,7 +1,7 @@
 #!/usr/bin/env python
-"""Configure OpenCode CLI with Databricks Model Serving via LiteLLM local proxy.
+"""Configure OpenCode CLI with Databricks Model Serving (via content-filter proxy) local proxy.
 
-Routes requests through a local LiteLLM proxy (localhost:4000) which sanitizes empty
+Routes requests through a local content-filter proxy proxy (localhost:4000) which sanitizes empty
 text content blocks before forwarding to Databricks AI Gateway. This fixes OpenCode
 issue #5028 where empty content blocks cause "Bad Request" errors.
 See docs/plans/2026-03-11-litellm-empty-content-blocks-design.md for details.
@@ -13,7 +13,7 @@ from pathlib import Path
 
 from utils import ensure_https
 
-# LiteLLM local proxy — sanitizes empty content blocks before reaching Databricks
+# content-filter proxy local proxy — sanitizes empty content blocks before reaching Databricks
 # (see https://github.com/sst/opencode/issues/5028)
 LITELLM_PROXY_URL = "http://127.0.0.1:4000"
 
@@ -85,15 +85,15 @@ opencode_config_dir = home / ".config" / "opencode"
 opencode_config_dir.mkdir(parents=True, exist_ok=True)
 
 if gateway_host:
-    # Gateway mode: route through LiteLLM proxy for content block sanitization
-    # LiteLLM forwards clean requests to Databricks AI Gateway
+    # Gateway mode: route through content-filter proxy proxy for content block sanitization
+    # content-filter proxy forwards clean requests to Databricks AI Gateway
     # OpenAI/GPT models go direct (not affected by the empty content block bug)
     opencode_config = {
         "$schema": "https://opencode.ai/config.json",
         "provider": {
             "databricks": {
                 "npm": "@ai-sdk/openai-compatible",
-                "name": "Databricks AI Gateway via LiteLLM",
+                "name": "Databricks AI Gateway (via content-filter proxy)",
                 "options": {
                     "baseURL": LITELLM_PROXY_URL,
                     "apiKey": "{env:DATABRICKS_TOKEN}"
@@ -165,14 +165,14 @@ if gateway_host:
         "model": f"databricks/{anthropic_model}"
     }
 else:
-    # Fallback: route through LiteLLM proxy for content block sanitization
-    # LiteLLM forwards clean requests to Databricks serving endpoints
+    # Fallback: route through content-filter proxy proxy for content block sanitization
+    # content-filter proxy forwards clean requests to Databricks serving endpoints
     opencode_config = {
         "$schema": "https://opencode.ai/config.json",
         "provider": {
             "databricks": {
                 "npm": "@ai-sdk/openai-compatible",
-                "name": "Databricks Model Serving via LiteLLM",
+                "name": "Databricks Model Serving (via content-filter proxy)",
                 "options": {
                     "baseURL": LITELLM_PROXY_URL,
                     "apiKey": "{env:DATABRICKS_TOKEN}"
