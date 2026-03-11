@@ -594,6 +594,21 @@ def set_security_headers(response):
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    # CSP: restrict scripts to self + inline (needed for embedded <script> block),
+    # styles to self + inline, block all other sources. Prevents external script injection.
+    # connect-src allows WebSocket + API calls to self.
+    # Fixes: https://github.com/datasciencemonkey/coding-agents-databricks-apps/issues/58
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'none'; "
+        "script-src 'self' 'unsafe-inline'; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data:; "
+        "font-src 'self'; "
+        "connect-src 'self' ws: wss:; "
+        "frame-ancestors 'none'; "
+        "base-uri 'self'; "
+        "form-action 'self'"
+    )
     return response
 
 
