@@ -29,16 +29,13 @@ UPSTREAM_BASE = os.environ.get("PROXY_UPSTREAM_BASE", "")
 LISTEN_HOST = os.environ.get("PROXY_HOST", "127.0.0.1")
 LISTEN_PORT = int(os.environ.get("PROXY_PORT", "4000"))
 
-# Diagnostic logging — writes to ~/.content-filter-proxy-debug.log
-_home = os.environ.get("HOME", "/app/python/source_code")
-_log_path = os.path.join(_home, ".content-filter-proxy-debug.log")
+# Diagnostic logging — writes to stderr which goes to ~/.content-filter-proxy.log
 log = logging.getLogger("content-filter-proxy")
 log.setLevel(logging.INFO)
-# Explicitly add file handler (basicConfig fails if root logger already configured)
 if not log.handlers:
-    _fh = logging.FileHandler(_log_path)
-    _fh.setFormatter(logging.Formatter("%(asctime)s %(message)s"))
-    log.addHandler(_fh)
+    _sh = logging.StreamHandler(sys.stderr)
+    _sh.setFormatter(logging.Formatter("%(asctime)s %(message)s"))
+    log.addHandler(_sh)
 
 # JSON Schema keywords that Gemini doesn't support
 GEMINI_UNSUPPORTED_SCHEMA_KEYS = {
