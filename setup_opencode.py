@@ -165,7 +165,7 @@ if gateway_host:
         "mcp": {
             "deepwiki": {
                 "type": "remote",
-                "url": "https://mcp.deepwiki.com/sse",
+                "url": "https://mcp.deepwiki.com/mcp",
                 "enabled": True,
                 "oauth": False
             },
@@ -232,7 +232,7 @@ else:
         "mcp": {
             "deepwiki": {
                 "type": "remote",
-                "url": "https://mcp.deepwiki.com/sse",
+                "url": "https://mcp.deepwiki.com/mcp",
                 "enabled": True,
                 "oauth": False
             },
