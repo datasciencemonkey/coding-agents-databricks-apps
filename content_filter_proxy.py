@@ -66,16 +66,18 @@ def strip_unsupported_schema_keys(obj):
     return obj
 
 
-def sanitize_for_gemini(data):
-    """Strip fields that Gemini's API rejects."""
-    model = data.get("model", "")
-    if "gemini" not in model.lower():
+def sanitize_tool_schemas(data):
+    """Strip JSON Schema keywords that some providers reject.
+
+    Applied universally — $schema, additionalProperties etc. are never
+    required by any downstream API. Claude/GPT ignore them, Gemini rejects them.
+    Stripping for all models is safe and avoids model detection issues.
+    """
+    tools = data.get("tools", [])
+    if not tools:
         return data
 
-    log.info(f"Applying Gemini compatibility fixes for model: {model}")
-
-    # Strip unsupported schema keys from tool definitions
-    for tool in data.get("tools", []):
+    for tool in tools:
         func = tool.get("function", {})
         if "parameters" in func:
             func["parameters"] = strip_unsupported_schema_keys(func["parameters"])
@@ -483,8 +485,8 @@ class ProxyHandler(BaseHTTPRequestHandler):
                 after = len(data["messages"])
                 if before != after:
                     log.info(f"Messages: {before} -> {after}")
-            # Gemini compatibility: strip unsupported schema keys and fields
-            data = sanitize_for_gemini(data)
+            # Strip unsupported schema keys from tool definitions (all models)
+            data = sanitize_tool_schemas(data)
             body = json.dumps(data).encode()
         except (json.JSONDecodeError, KeyError) as e:
             log.warning(f"Could not parse request body: {e}")
