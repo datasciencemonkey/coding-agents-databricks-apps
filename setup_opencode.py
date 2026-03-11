@@ -126,11 +126,12 @@ if gateway_host:
                 }
             },
             "databricks-openai": {
-                "npm": "@ai-sdk/openai-compatible",
+                "npm": "@ai-sdk/openai",
                 "name": "Databricks AI Gateway (OpenAI)",
                 "options": {
                     "baseURL": f"{gateway_host}/openai/v1",
-                    "apiKey": "{env:DATABRICKS_TOKEN}"
+                    "apiKey": "{env:DATABRICKS_TOKEN}",
+                    "compatibility": "compatible"
                 },
                 "models": {
                     "databricks-gpt-5-2-codex": {
