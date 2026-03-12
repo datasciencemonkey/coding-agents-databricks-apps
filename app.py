@@ -613,10 +613,10 @@ def set_security_headers(response):
     # Fixes: https://github.com/datasciencemonkey/coding-agents-databricks-apps/issues/58
     response.headers["Content-Security-Policy"] = (
         "default-src 'none'; "
-        "script-src 'self' 'unsafe-inline'; "
-        "style-src 'self' 'unsafe-inline'; "
+        "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
         "img-src 'self' data:; "
-        "font-src 'self'; "
+        "font-src 'self' https://fonts.gstatic.com; "
         "connect-src 'self' ws: wss:; "
         "frame-ancestors 'none'; "
         "base-uri 'self'; "
