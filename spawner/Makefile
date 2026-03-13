@@ -93,7 +93,9 @@ sync-template: ## Sync coding-agents source to shared template path
 	@cd .. && databricks sync . $(TEMPLATE_SRC) --watch=false --profile $(PROFILE)
 	@# Override app.yaml with spawner-friendly defaults (no gateway valueFrom)
 	@echo "    Uploading template app.yaml..."
-	@printf 'command:\n  - gunicorn\n  - app:app\nenv:\n  - name: HOME\n    value: /app/python/source_code\n  - name: DATABRICKS_TOKEN\n    valueFrom: DATABRICKS_TOKEN\n  - name: ANTHROPIC_MODEL\n    value: databricks-claude-sonnet-4-6\n  - name: GEMINI_MODEL\n    value: databricks-gemini-3-1-pro\n  - name: CLAUDE_CODE_DISABLE_AUTO_MEMORY\n    value: 0\n' | databricks workspace import $(TEMPLATE_SRC)/app.yaml --format AUTO --overwrite --profile $(PROFILE)
+	@printf 'command:\n  - uv\n  - run\n  - gunicorn\n  - app:app\nenv:\n  - name: HOME\n    value: /app/python/source_code\n  - name: DATABRICKS_TOKEN\n    valueFrom: DATABRICKS_TOKEN\n  - name: ANTHROPIC_MODEL\n    value: databricks-claude-sonnet-4-6\n  - name: GEMINI_MODEL\n    value: databricks-gemini-3-1-pro\n  - name: CODEX_MODEL\n    value: databricks-gpt-5-2\n  - name: DATABRICKS_GATEWAY_HOST\n    valueFrom: DATABRICKS_GATEWAY_HOST\n  - name: CLAUDE_CODE_DISABLE_AUTO_MEMORY\n    value: 0\n' > /tmp/_coda_template_app.yaml
+	@databricks workspace import $(TEMPLATE_SRC)/app.yaml --file /tmp/_coda_template_app.yaml --format AUTO --overwrite --profile $(PROFILE)
+	@rm -f /tmp/_coda_template_app.yaml
 	@echo "    Template synced."
 
 sync: ## Sync spawner source to workspace
