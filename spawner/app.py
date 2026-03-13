@@ -95,6 +95,25 @@ def create_app(host: str, oauth_token: str, app_name: str, scope_name: str, secr
 
 
 
+def wait_for_app_running(host: str, oauth_token: str, app_name: str, timeout: int = 180, interval: int = 10) -> None:
+    """Poll until the app reaches RUNNING state (or timeout)."""
+    import time
+
+    headers = {"Authorization": f"Bearer {oauth_token}"}
+    elapsed = 0
+    while elapsed < timeout:
+        resp = requests.get(f"{host}/api/2.0/apps/{app_name}", headers=headers)
+        if resp.ok:
+            state = resp.json().get("app_status", {}).get("state", "")
+            if state == "RUNNING":
+                return
+            if state in ("CRASHED", "FAILED"):
+                raise RuntimeError(f"App entered {state} state, cannot deploy")
+        time.sleep(interval)
+        elapsed += interval
+    raise RuntimeError(f"Timed out waiting for app '{app_name}' to reach RUNNING state after {timeout}s")
+
+
 def deploy_app(
     host: str, oauth_token: str, app_name: str, source_code_path: str
 ) -> dict:
@@ -205,12 +224,16 @@ def provision_app(host: str, admin_token: str, pat_value: str) -> dict:
             steps.append({"step": 3, "status": "granting_access", "message": "Granting service principal access to secrets..."})
             grant_sp_secret_access(host, admin_token, scope_name, sp_client_id)
 
-        # Step 4: Deploy from shared template
-        steps.append({"step": 4, "status": "deploying", "message": "Deploying app..."})
+        # Step 4: Wait for app to reach RUNNING state before deploying
+        steps.append({"step": 4, "status": "waiting_for_ready", "message": "Waiting for app to be ready..."})
+        wait_for_app_running(host, admin_token, app_name)
+
+        # Step 5: Deploy from shared template
+        steps.append({"step": 5, "status": "deploying", "message": "Deploying app..."})
         deploy_app(host, admin_token, app_name, source_code_path)
 
         app_url = app_result.get("url", app_result.get("app_url", ""))
-        steps.append({"step": 5, "status": "complete", "app_url": app_url})
+        steps.append({"step": 6, "status": "complete", "app_url": app_url})
 
         return {"success": True, "steps": steps, "app_url": app_url, "app_name": app_name}
 
