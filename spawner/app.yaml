@@ -1,0 +1,10 @@
+command:
+  - uv
+  - run
+  - gunicorn
+  - --timeout
+  - "300"
+  - app:app
+env:
+  - name: ADMIN_TOKEN
+    valueFrom: ADMIN_TOKEN
