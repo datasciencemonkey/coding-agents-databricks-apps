@@ -417,7 +417,9 @@ function pollRedeployStatus() {
               : a.status === 'error' ? '<span style="color:var(--dbx-error)">✗</span>'
               : a.status === 'deploying' ? '<span class="spinner-sm"></span>'
               : '<span style="color:var(--dbx-text-muted)">○</span>';
-            html += icon + ' ' + a.name + '  ';
+            html += icon + ' ' + a.name;
+            if (a.status === 'error' && a.error) html += ' <span style="color:var(--dbx-text-muted);font-size:11px;">(' + a.error.substring(0, 80) + ')</span>';
+            html += '<br>';
           });
         }
         statusDiv.innerHTML = html;
@@ -426,7 +428,14 @@ function pollRedeployStatus() {
         redeployPollTimer = null;
         statusDiv.style.color = 'var(--dbx-green)';
         statusDiv.style.borderColor = 'rgba(63,185,80,0.3)';
-        statusDiv.innerHTML = '✓ All ' + total + ' apps redeployed' + (errored > 0 ? ' (' + errored + ' failed)' : '');
+        let completeHtml = '✓ All ' + total + ' apps redeployed' + (errored > 0 ? ' (' + errored + ' failed)' : '');
+        if (errored > 0 && data.apps) {
+          completeHtml += '<br>';
+          data.apps.filter(a => a.status === 'error').forEach(a => {
+            completeHtml += '<span style="color:var(--dbx-error)">✗ ' + a.name + '</span> <span style="color:var(--dbx-text-muted);font-size:11px;">' + (a.error || '') + '</span><br>';
+          });
+        }
+        statusDiv.innerHTML = completeHtml;
         btn.disabled = false;
         btn.textContent = 'Redeploy All';
         loadApps();
