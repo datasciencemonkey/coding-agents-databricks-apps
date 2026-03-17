@@ -93,7 +93,15 @@ sync-template: ## Sync coding-agents source to shared template path
 	@cd .. && databricks sync . $(TEMPLATE_SRC) --watch=false --profile $(PROFILE)
 	@# Override app.yaml with spawner-friendly defaults (no gateway valueFrom)
 	@echo "    Uploading template app.yaml..."
-	@printf 'command:\n  - uv\n  - run\n  - gunicorn\n  - app:app\nenv:\n  - name: HOME\n    value: /app/python/source_code\n  - name: DATABRICKS_TOKEN\n    valueFrom: DATABRICKS_TOKEN\n  - name: ANTHROPIC_MODEL\n    value: databricks-claude-sonnet-4-6\n  - name: GEMINI_MODEL\n    value: databricks-gemini-3-1-pro\n  - name: CODEX_MODEL\n    value: databricks-gpt-5-2\n  - name: DATABRICKS_GATEWAY_HOST\n    valueFrom: DATABRICKS_GATEWAY_HOST\n  - name: CLAUDE_CODE_DISABLE_AUTO_MEMORY\n    value: 0\n' > /tmp/_coda_template_app.yaml
+	@# Resolve team-memory-mcp app URL (if deployed)
+	$(eval TEAM_MEMORY_URL := $(shell databricks apps get team-memory-mcp --profile $(PROFILE) --output json 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin).get('url',''))" 2>/dev/null))
+	@printf 'command:\n  - uv\n  - run\n  - gunicorn\n  - app:app\nenv:\n  - name: HOME\n    value: /app/python/source_code\n  - name: DATABRICKS_TOKEN\n    valueFrom: DATABRICKS_TOKEN\n  - name: ANTHROPIC_MODEL\n    value: databricks-claude-opus-4-6\n  - name: GEMINI_MODEL\n    value: databricks-gemini-3-1-pro\n  - name: CODEX_MODEL\n    value: databricks-gpt-5-2\n  - name: DATABRICKS_GATEWAY_HOST\n    valueFrom: DATABRICKS_GATEWAY_HOST\n  - name: CLAUDE_CODE_DISABLE_AUTO_MEMORY\n    value: 0\n' > /tmp/_coda_template_app.yaml
+	@if [ -n "$(TEAM_MEMORY_URL)" ]; then \
+		printf '  - name: TEAM_MEMORY_MCP_URL\n    value: %s\n' "$(TEAM_MEMORY_URL)" >> /tmp/_coda_template_app.yaml; \
+		echo "    Team memory MCP URL: $(TEAM_MEMORY_URL)"; \
+	else \
+		echo "    Team memory MCP: not deployed (skipping)"; \
+	fi
 	@databricks workspace import $(TEMPLATE_SRC)/app.yaml --file /tmp/_coda_template_app.yaml --format AUTO --overwrite --profile $(PROFILE)
 	@rm -f /tmp/_coda_template_app.yaml
 	@echo "    Template synced."
