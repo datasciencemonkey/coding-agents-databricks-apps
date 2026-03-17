@@ -224,7 +224,20 @@ def provision_app(host: str, admin_token: str, pat_value: str) -> dict:
             raise ValueError("Could not resolve PAT owner identity")
         app_name = app_name_from_email(email)
         scope_name = f"{app_name}-secrets"
-        secret_key = str(uuid.uuid4())
+        # Deterministic key so re-provisions overwrite the same secret
+        secret_key = "databricks-token"
+
+        # Step 0.5: Check if app already exists and is running — skip provisioning
+        existing = check_existing_app(host, admin_token, app_name)
+        if existing.get("deployed") and existing.get("state") == "RUNNING":
+            # Still update the stored PAT in case user rotated their token
+            store_pat_in_secret_scope(host, admin_token, app_name, pat_value, secret_key)
+            return {
+                "success": True,
+                "steps": [{"step": 0, "status": "already_deployed", "message": "App already running — token refreshed."}],
+                "app_url": existing.get("app_url", ""),
+                "app_name": app_name,
+            }
 
         # Step 1: Create secret scope and store user's PAT (admin token for scope ops)
         steps.append({"step": 1, "status": "storing_secret", "message": "Storing token in secret scope..."})
