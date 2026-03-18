@@ -266,50 +266,10 @@ def run_setup():
     _run_step("micro", ["bash", "-c",
         "mkdir -p ~/.local/bin && bash install_micro.sh && mv micro ~/.local/bin/ 2>/dev/null || true"])
 
-    _run_step(
-        "gh",
-        [
-            "bash",
-            "-c",
-            'GH_VERSION="2.74.1" && '
-            "mkdir -p ~/.local/bin && "
-            'curl -fsSL "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_amd64.tar.gz" -o /tmp/gh.tar.gz && '
-            "tar -xzf /tmp/gh.tar.gz -C /tmp && "
-            "mv /tmp/gh_${GH_VERSION}_linux_amd64/bin/gh ~/.local/bin/gh && "
-            "rm -rf /tmp/gh.tar.gz /tmp/gh_${GH_VERSION}_linux_amd64 && "
-            "chmod +x ~/.local/bin/gh && "
-            "gh config set git_protocol https 2>/dev/null || true && "
-            # Wrap gh auth login to skip interactive prompts (arrow-key menus break in xterm.js PTY)
-            "printf '#!/bin/bash\\n"
-            'if [ "$1" = "auth" ] && [ "$2" = "login" ]; then\\n'
-            "    shift 2\\n"
-            '    printf "Y\\\\n" | ~/.local/bin/gh.real auth login -h github.com -p https -w --skip-ssh-key "$@"\\n'
-            "fi\\n"
-            'exec ~/.local/bin/gh.real "$@"\\n\' > ~/.local/bin/gh.wrapper && '
-            "mv ~/.local/bin/gh ~/.local/bin/gh.real && "
-            "mv ~/.local/bin/gh.wrapper ~/.local/bin/gh && "
-            "chmod +x ~/.local/bin/gh",
-        ],
-    )
+    _run_step("gh", ["bash", "install_gh.sh"])
 
     # --- Upgrade Databricks CLI (runtime image ships an older version) ---
-    _run_step(
-        "dbcli",
-        [
-            "bash",
-            "-c",
-            "mkdir -p ~/.local/bin && "
-            # Fetch latest release tag from GitHub API
-            'DB_CLI_VERSION=$(curl -fsSL "https://api.github.com/repos/databricks/cli/releases/latest" | python3 -c "import sys,json; print(json.load(sys.stdin)[\'tag_name\'].lstrip(\'v\'))") && '
-            'echo "Installing Databricks CLI v${DB_CLI_VERSION}" && '
-            'curl -fsSL "https://github.com/databricks/cli/releases/download/v${DB_CLI_VERSION}/databricks_cli_${DB_CLI_VERSION}_linux_amd64.zip" -o /tmp/dbcli.zip && '
-            "unzip -o /tmp/dbcli.zip -d /tmp/dbcli && "
-            "mv /tmp/dbcli/databricks ~/.local/bin/databricks && "
-            "rm -rf /tmp/dbcli.zip /tmp/dbcli && "
-            "chmod +x ~/.local/bin/databricks && "
-            "databricks --version",
-        ],
-    )
+    _run_step("dbcli", ["bash", "install_databricks_cli.sh"])
 
     # --- Content-filter proxy (must be running before OpenCode starts) ---
     # Sanitizes requests/responses between OpenCode and Databricks
