@@ -1,11 +1,12 @@
 # Makefile for deploying Coding Agents to Databricks Apps
 #
 # Usage:
-#   make deploy PROFILE=daveok PAT=dapi...
-#   make deploy PROFILE=daveok              # prompts for PAT interactively
+#   make deploy PROFILE=daveok              # full deploy (prompts for PAT interactively)
 #   make redeploy PROFILE=daveok            # skip secret setup, just sync + deploy
+#   make create-pat PROFILE=daveok          # auto-generate a 90-day PAT and store it
 #   make status PROFILE=daveok              # check app status
 #   make logs PROFILE=daveok                # tail app logs
+#   make clean PROFILE=daveok               # remove app and secret scope
 
 # Configuration
 PROFILE       ?= DEFAULT
@@ -17,7 +18,7 @@ SECRET_KEY    ?= databricks-token
 USER_EMAIL    = $(shell databricks current-user me --profile $(PROFILE) --output json 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin).get('userName',''))")
 WORKSPACE_PATH = /Workspace/Users/$(USER_EMAIL)/apps/$(APP_NAME)
 
-.PHONY: help deploy redeploy create-app setup-secret sync deploy-app status logs clean-secret
+.PHONY: help deploy redeploy create-app setup-secret sync deploy-app status logs clean-secret clean create-pat
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
@@ -85,3 +86,20 @@ logs: ## Tail app logs
 clean-secret: ## Remove secret scope (destructive)
 	@echo "==> Removing secret scope '$(SECRET_SCOPE)'..."
 	databricks secrets delete-scope $(SECRET_SCOPE) --profile $(PROFILE)
+
+clean: ## Remove app and secret scope (destructive)
+	@echo "==> Removing app '$(APP_NAME)'..."
+	@databricks apps delete $(APP_NAME) --profile $(PROFILE) 2>/dev/null && \
+		echo "    App '$(APP_NAME)' deleted." || \
+		echo "    App '$(APP_NAME)' not found or already deleted."
+	@echo "==> Removing secret scope '$(SECRET_SCOPE)'..."
+	@databricks secrets delete-scope $(SECRET_SCOPE) --profile $(PROFILE) 2>/dev/null && \
+		echo "    Secret scope '$(SECRET_SCOPE)' deleted." || \
+		echo "    Secret scope '$(SECRET_SCOPE)' not found or already deleted."
+
+create-pat: ## Generate a 90-day PAT and store it as the app secret
+	@echo "==> Generating a 90-day PAT..."
+	@databricks tokens create --lifetime-seconds $$((90 * 24 * 60 * 60)) --comment "coding-agents (auto-generated)" --profile $(PROFILE) --output json \
+		| python3 -c "import sys,json; print(json.load(sys.stdin)['token_value'])" \
+		| databricks secrets put-secret $(SECRET_SCOPE) $(SECRET_KEY) --profile $(PROFILE)
+	@echo "    PAT created and stored in $(SECRET_SCOPE)/$(SECRET_KEY)"
