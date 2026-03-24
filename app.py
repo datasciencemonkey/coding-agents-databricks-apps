@@ -40,6 +40,7 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__, static_folder='static', static_url_path='/static')
 app.secret_key = os.urandom(24)
+app.config['MAX_CONTENT_LENGTH'] = 32 * 1024 * 1024  # 32 MB — aligned with Claude Code's 30 MB file limit
 
 # WebSocket support via Flask-SocketIO (simple-websocket transport, threading mode)
 socketio = SocketIO(app, async_mode='threading', cors_allowed_origins=[], logger=False, engineio_logger=False)
@@ -690,6 +691,7 @@ def create_session():
             env=shell_env,
             cwd=projects_dir
         ).pid
+        os.close(slave_fd)  # Parent doesn't need the slave side; child inherited it
 
         session_id = str(uuid.uuid4())
 
