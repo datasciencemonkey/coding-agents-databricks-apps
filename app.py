@@ -640,7 +640,7 @@ def cleanup_stale_sessions():
 def authorize_request():
     """Check authorization before processing any request."""
     # Skip auth for health check, setup status, and Socket.IO (has own auth via connect event)
-    if request.path in ("/health", "/api/setup-status") or request.path.startswith("/socket.io"):
+    if request.path in ("/health", "/api/setup-status", "/api/pat-status", "/api/configure-pat") or request.path.startswith("/socket.io"):
         return None
 
     authorized, user = check_authorization()
@@ -709,6 +709,52 @@ def health():
 @app.route("/api/version")
 def get_version():
     return jsonify({"version": APP_VERSION})
+
+
+@app.route("/api/pat-status")
+def pat_status():
+    """Check if a valid, usable PAT is configured."""
+    token = os.environ.get("DATABRICKS_TOKEN", "").strip()
+    if not token:
+        return jsonify({"configured": False, "valid": False, "workspace_host": os.environ.get("DATABRICKS_HOST", "")})
+
+    # Validate the token actually works
+    try:
+        from databricks.sdk import WorkspaceClient
+        host = ensure_https(os.environ.get("DATABRICKS_HOST", ""))
+        w = WorkspaceClient(host=host, token=token, auth_type="pat")
+        user = w.current_user.me().user_name
+        return jsonify({"configured": True, "valid": True, "user": user})
+    except Exception:
+        return jsonify({"configured": True, "valid": False, "workspace_host": os.environ.get("DATABRICKS_HOST", "")})
+
+
+@app.route("/api/configure-pat", methods=["POST"])
+def configure_pat():
+    """Accept a user-provided PAT, validate it, and start rotation."""
+    data = request.json
+    token = data.get("token", "").strip()
+    if not token:
+        return jsonify({"error": "Token required"}), 400
+
+    # Validate the token works
+    try:
+        from databricks.sdk import WorkspaceClient
+        host = ensure_https(os.environ.get("DATABRICKS_HOST", ""))
+        w = WorkspaceClient(host=host, token=token, auth_type="pat")
+        user = w.current_user.me().user_name
+    except Exception as e:
+        return jsonify({"error": f"Invalid token: {e}"}), 400
+
+    # Set the token and start rotation
+    os.environ["DATABRICKS_TOKEN"] = token
+    pat_rotator._current_token = token
+    pat_rotator._current_token_id = None
+    pat_rotator._write_databrickscfg(token)
+    pat_rotator.start()
+
+    logger.info(f"PAT configured interactively by {user} — rotation started")
+    return jsonify({"status": "ok", "user": user, "message": "Token configured. Auto-rotation started."})
 
 
 @app.route("/api/session", methods=["POST"])
