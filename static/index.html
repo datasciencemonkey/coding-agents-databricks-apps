@@ -1263,8 +1263,46 @@
         term.write('\x1b[90m  Auto-rotation started. This token will be rotated out in 10 minutes.\x1b[0m\r\n');
         term.write('\r\n');
 
-        // Small delay then create the actual session
-        await new Promise(r => setTimeout(r, 1000));
+        // Wait for setup if not already complete
+        const setupCheckResp = await fetch('/api/setup-status');
+        const setupCheckData = await setupCheckResp.json();
+
+        if (setupCheckData.status !== 'complete') {
+            term.write('\x1b[90m  Setting up CLI tools...\x1b[0m\r\n');
+            while (true) {
+                await new Promise(r => setTimeout(r, 2000));
+                const pollResp = await fetch('/api/setup-status');
+                const pollData = await pollResp.json();
+                if (pollData.status === 'complete' || pollData.status === 'error') {
+                    if (pollData.status === 'complete') {
+                        term.write('\x1b[1;32m  Setup complete!\x1b[0m\r\n\r\n');
+                    } else {
+                        term.write('\x1b[1;33m  Setup completed with warnings.\x1b[0m\r\n\r\n');
+                    }
+                    break;
+                }
+            }
+        }
+      } else {
+        // PAT is valid — check if setup is done before creating session
+        const setupResp2 = await fetch('/api/setup-status');
+        const setupData2 = await setupResp2.json();
+        if (setupData2.status !== 'complete' && setupData2.status !== 'error') {
+            term.write('\x1b[90m  Setting up CLI tools...\x1b[0m\r\n');
+            while (true) {
+                await new Promise(r => setTimeout(r, 2000));
+                const pollResp2 = await fetch('/api/setup-status');
+                const pollData2 = await pollResp2.json();
+                if (pollData2.status === 'complete' || pollData2.status === 'error') {
+                    if (pollData2.status === 'complete') {
+                        term.write('\x1b[1;32m  Setup complete!\x1b[0m\r\n\r\n');
+                    } else {
+                        term.write('\x1b[1;33m  Setup completed with warnings.\x1b[0m\r\n\r\n');
+                    }
+                    break;
+                }
+            }
+        }
       }
 
       const sid = await createSession();

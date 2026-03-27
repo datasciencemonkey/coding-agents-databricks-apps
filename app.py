@@ -18,6 +18,7 @@ from werkzeug.utils import secure_filename
 from collections import deque
 
 import tomllib
+import requests
 
 from utils import ensure_https
 from pat_rotator import PATRotator
@@ -776,17 +777,22 @@ def pat_status():
     """Check if a valid, usable PAT is configured."""
     token = os.environ.get("DATABRICKS_TOKEN", "").strip()
     if not token:
-        return jsonify({"configured": False, "valid": False, "workspace_host": os.environ.get("DATABRICKS_HOST", "")})
+        return jsonify({"configured": False, "valid": False,
+                       "workspace_host": os.environ.get("DATABRICKS_HOST", "")})
 
-    # Validate the token actually works
+    # Validate with direct HTTP — avoids SDK auth fallback to SP
+    host = ensure_https(os.environ.get("DATABRICKS_HOST", ""))
     try:
-        from databricks.sdk import WorkspaceClient
-        host = ensure_https(os.environ.get("DATABRICKS_HOST", ""))
-        w = WorkspaceClient(host=host, token=token, auth_type="pat")
-        user = w.current_user.me().user_name
-        return jsonify({"configured": True, "valid": True, "user": user})
+        resp = requests.get(f"{host}/api/2.0/preview/scim/v2/Me",
+                           headers={"Authorization": f"Bearer {token}"}, timeout=10)
+        if resp.status_code == 200:
+            user = resp.json().get("userName", "unknown")
+            return jsonify({"configured": True, "valid": True, "user": user})
+        return jsonify({"configured": True, "valid": False,
+                       "workspace_host": host})
     except Exception:
-        return jsonify({"configured": True, "valid": False, "workspace_host": os.environ.get("DATABRICKS_HOST", "")})
+        return jsonify({"configured": True, "valid": False,
+                       "workspace_host": host})
 
 
 @app.route("/api/configure-pat", methods=["POST"])
@@ -797,14 +803,16 @@ def configure_pat():
     if not token:
         return jsonify({"error": "Token required"}), 400
 
-    # Validate the token works
+    # Validate the token — direct HTTP, no SDK fallback
+    host = ensure_https(os.environ.get("DATABRICKS_HOST", ""))
     try:
-        from databricks.sdk import WorkspaceClient
-        host = ensure_https(os.environ.get("DATABRICKS_HOST", ""))
-        w = WorkspaceClient(host=host, token=token, auth_type="pat")
-        user = w.current_user.me().user_name
+        resp = requests.get(f"{host}/api/2.0/preview/scim/v2/Me",
+                           headers={"Authorization": f"Bearer {token}"}, timeout=10)
+        if resp.status_code != 200:
+            return jsonify({"error": "Invalid token"}), 400
+        user = resp.json().get("userName", "unknown")
     except Exception as e:
-        return jsonify({"error": f"Invalid token: {e}"}), 400
+        return jsonify({"error": f"Token validation failed: {e}"}), 400
 
     # Set the token and start rotation
     os.environ["DATABRICKS_TOKEN"] = token
@@ -815,6 +823,14 @@ def configure_pat():
 
     # Configure all CLI tools (Claude, Codex, OpenCode, Gemini, Databricks)
     _configure_all_cli_auth(token)
+
+    # Run setup now that we have a valid token (installs CLIs, configures agents)
+    # Only run if setup hasn't completed yet
+    with setup_lock:
+        if setup_state["status"] != "complete":
+            setup_thread = threading.Thread(target=run_setup, daemon=True, name="setup-thread")
+            setup_thread.start()
+            logger.info("Setup triggered after PAT configuration")
 
     logger.info(f"PAT configured interactively by {user} — rotation started")
     return jsonify({"status": "ok", "user": user, "message": "Token configured. Auto-rotation started."})
@@ -1071,18 +1087,16 @@ def initialize_app(local_dev=False):
     else:
         logger.warning("Could not determine app owner - authorization disabled")
 
+    # Strip SP credentials — only needed for owner resolution above.
+    # Keeping them causes SDK to silently fall back to SP auth when PAT is dead.
+    os.environ.pop("DATABRICKS_CLIENT_ID", None)
+    os.environ.pop("DATABRICKS_CLIENT_SECRET", None)
+    logger.info("SP credentials stripped — PAT-only auth from this point")
+
     # Start background cleanup thread
     cleanup_thread = threading.Thread(target=cleanup_stale_sessions, daemon=True)
     cleanup_thread.start()
     logger.info(f"Started session cleanup thread (timeout={SESSION_TIMEOUT_SECONDS}s, interval={CLEANUP_INTERVAL_SECONDS}s)")
-
-    # Start setup in background thread — app starts immediately with loading screen
-    setup_thread = threading.Thread(target=run_setup, daemon=True, name="setup-thread")
-    setup_thread.start()
-    logger.info("Started background setup thread")
-
-    # Start PAT auto-rotation if a PAT is configured
-    pat_rotator.start()
 
 
 if __name__ == "__main__":
