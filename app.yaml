@@ -4,8 +4,6 @@ command:
 env:
   - name: HOME
     value: /app/python/source_code
-  - name: DATABRICKS_TOKEN
-    valueFrom: DATABRICKS_TOKEN
   - name: PAT_SECRET_SCOPE
     value: coda-app
   - name: PAT_SECRET_KEY
