@@ -20,6 +20,7 @@ from collections import deque
 import tomllib
 
 from utils import ensure_https
+from pat_rotator import PATRotator
 
 # Sanitize DATABRICKS_TOKEN early — the platform sometimes injects trailing
 # newlines / whitespace which causes auth failures.  Cleaning it here prevents
@@ -44,6 +45,12 @@ GRACEFUL_SHUTDOWN_WAIT = 3          # Seconds to wait after SIGHUP before SIGKIL
 # Logging setup
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# PAT auto-rotation (short-lived tokens, background refresh)
+pat_rotator = PATRotator(
+    secret_scope=os.environ.get("PAT_SECRET_SCOPE"),
+    secret_key=os.environ.get("PAT_SECRET_KEY", "DATABRICKS_TOKEN"),
+)
 
 app = Flask(__name__, static_folder='static', static_url_path='/static')
 app.secret_key = os.urandom(24)
@@ -944,6 +951,9 @@ def initialize_app(local_dev=False):
     setup_thread = threading.Thread(target=run_setup, daemon=True, name="setup-thread")
     setup_thread.start()
     logger.info("Started background setup thread")
+
+    # Start PAT auto-rotation if a PAT is configured
+    pat_rotator.start()
 
 
 if __name__ == "__main__":
