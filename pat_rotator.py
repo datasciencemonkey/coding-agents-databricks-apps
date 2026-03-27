@@ -17,7 +17,7 @@ from utils import ensure_https
 logger = logging.getLogger(__name__)
 
 DEFAULT_TOKEN_LIFETIME = 7200       # 2 hours
-DEFAULT_ROTATION_INTERVAL = 5400    # 90 minutes
+DEFAULT_ROTATION_INTERVAL = 120     # 2 minutes
 
 
 class PATRotator:
