@@ -6,6 +6,7 @@ and revokes the old PAT. Fixes #81.
 """
 
 import os
+import time
 import threading
 import logging
 
@@ -16,8 +17,9 @@ from utils import ensure_https
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_TOKEN_LIFETIME = 600        # 10 minutes
-DEFAULT_ROTATION_INTERVAL = 300     # 5 minutes
+DEFAULT_TOKEN_LIFETIME = 900        # 15 minutes
+DEFAULT_ROTATION_INTERVAL = 600     # 10 minutes
+FRESHNESS_THRESHOLD = 480           # 8 minutes — rotate early if token is older than this
 
 
 class PATRotator:
@@ -33,6 +35,7 @@ class PATRotator:
         self._secret_key = secret_key
         self._current_token = os.environ.get("DATABRICKS_TOKEN", "").strip() or None
         self._current_token_id = None
+        self._last_rotation_time = 0
         self._lock = threading.Lock()
         self._thread = None
         self._stop_event = threading.Event()
@@ -45,6 +48,18 @@ class PATRotator:
     def token(self):
         with self._lock:
             return self._current_token
+
+    def ensure_fresh(self):
+        """Ensure the current token is fresh — rotate immediately if stale.
+
+        Called on session creation so the user never starts with an expiring token.
+        """
+        if not self._current_token:
+            return
+        age = time.time() - self._last_rotation_time
+        if self._last_rotation_time == 0 or age > FRESHNESS_THRESHOLD:
+            logger.info(f"PAT token age {int(age)}s > threshold {FRESHNESS_THRESHOLD}s — rotating now")
+            self._rotate_once()
 
     def start(self):
         """Start the background rotation thread."""
@@ -111,6 +126,7 @@ class PATRotator:
         with self._lock:
             self._current_token = new_token
             self._current_token_id = new_token_id
+            self._last_rotation_time = time.time()
         self._persist_token(new_token)
 
         # 3. Revoke old token (best-effort — expires in 2h anyway)

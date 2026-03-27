@@ -710,6 +710,8 @@ def get_version():
 @app.route("/api/session", methods=["POST"])
 def create_session():
     """Create a new terminal session."""
+    # Ensure PAT is fresh before handing a session to the user
+    pat_rotator.ensure_fresh()
     try:
         master_fd, slave_fd = pty.openpty()
         # Set up environment for the shell
