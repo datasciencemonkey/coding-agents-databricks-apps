@@ -13,6 +13,7 @@ import logging
 
 import requests
 
+import app_state
 from utils import ensure_https
 
 logger = logging.getLogger(__name__)
@@ -38,7 +39,7 @@ class PATRotator:
         self._session_count_fn = session_count_fn or (lambda: 0)
         self._current_token = os.environ.get("DATABRICKS_TOKEN", "").strip() or None
         self._current_token_id = None
-        self._last_rotation_time = None  # set on first successful mint
+        self._last_rotation_time = app_state.get_last_rotation_time()  # survives restarts
         self._lock = threading.Lock()
         self._thread = None
         self._stop_event = threading.Event()
@@ -125,12 +126,13 @@ class PATRotator:
 
         old_token_id = self._current_token_id
 
-        # 2. Persist new token (env + file + secret)
+        # 2. Persist new token (env + file + app_state)
         with self._lock:
             self._current_token = new_token
             self._current_token_id = new_token_id
             self._last_rotation_time = time.time()
         self._persist_token(new_token)
+        app_state.set_last_rotation(new_token_id, self._last_rotation_time)
 
         # 3. Revoke old token (best-effort — expires naturally anyway)
         if old_token_id:

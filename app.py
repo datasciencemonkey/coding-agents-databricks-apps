@@ -1085,10 +1085,12 @@ def initialize_app(local_dev=False):
     # SP credentials preserved — needed for Apps API (owner resolution) and secret persistence
 
     # Resolve owner: Apps API (app.creator via SP) > PAT (current_user.me)
+    import app_state
     app_owner = get_token_owner()
     if app_owner:
         logger.info(f"App owner: {app_owner}")
         os.environ["APP_OWNER"] = app_owner
+        app_state.set_app_owner(app_owner)
     else:
         logger.warning("Could not determine app owner - authorization disabled")
 
