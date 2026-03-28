@@ -823,6 +823,7 @@ def list_sessions():
             continue
         result.append({
             "session_id": session_id,
+            "label": sess.get("label", ""),
             "created_at": sess.get("created_at"),
             "last_poll_time": sess.get("last_poll_time"),
             "exited": False,
@@ -847,6 +848,7 @@ def attach_session():
 
     return jsonify({
         "session_id": session_id,
+        "label": sess.get("label", ""),
         "output": list(sess["output_buffer"]),
         "process": _get_session_process(sess["pid"]),
         "created_at": sess.get("created_at"),
@@ -949,6 +951,8 @@ def configure_pat():
 @app.route("/api/session", methods=["POST"])
 def create_session():
     """Create a new terminal session."""
+    data = request.get_json(silent=True) or {}
+    label = data.get("label", "")
     try:
         master_fd, slave_fd = pty.openpty()
         # Set up environment for the shell
@@ -988,7 +992,8 @@ def create_session():
                 "output_buffer": deque(maxlen=1000),
                 "lock": threading.Lock(),
                 "last_poll_time": time.time(),
-                "created_at": time.time()
+                "created_at": time.time(),
+                "label": label,
             }
 
         # Start background reader thread

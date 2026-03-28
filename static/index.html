@@ -888,8 +888,12 @@
     // ── Session / IO (parameterized by sessionId) ──────────────────
     const status = document.getElementById('status');
 
-    async function createSession() {
-      const resp = await fetch('/api/session', { method: 'POST' });
+    async function createSession(label) {
+      const resp = await fetch('/api/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ label: label || '' })
+      });
       const data = await resp.json();
       if (data.error) throw new Error(data.error);
       return data.session_id;
@@ -1134,12 +1138,13 @@
           term.write('\x1b[1;36m  Existing sessions:\x1b[0m\r\n\r\n');
 
           sessions.forEach((s, i) => {
-            const proc = (s.process || 'bash').padEnd(12);
+            const name = (s.label || s.process || 'bash').padEnd(14);
+            const proc = s.label ? ' \x1b[90m[' + (s.process || 'bash') + ']\x1b[0m' : '';
             const ago = _formatAge(s.created_at);
             const idle = s.idle_seconds > 60 ? ', idle ' + _formatDuration(s.idle_seconds) : '';
             term.write('  \x1b[1;32m' + (i + 1) + '\x1b[0m  ');
-            term.write('\x1b[1;37m' + proc + '\x1b[0m');
-            term.write('\x1b[90m(' + ago + idle + ')\x1b[0m\r\n');
+            term.write('\x1b[1;37m' + name + '\x1b[0m');
+            term.write('\x1b[90m(' + ago + idle + ')\x1b[0m' + proc + '\r\n');
           });
 
           term.write('\r\n  \x1b[1;33mn\x1b[0m  New session\r\n');
@@ -1404,7 +1409,7 @@
                 }
             }
         }
-        var sid = await createSession();
+        var sid = await createSession(tab.label);
         var reattached = false;
       } else if (!opts.newSession) {
         // PAT is valid, initial page load — check for existing sessions to reattach
@@ -1431,7 +1436,7 @@
               }
             }
           }
-          var sid = await createSession();
+          var sid = await createSession(tab.label);
           var reattached = false;
         } else if (liveSessions.length === 1) {
           // One session — auto-reattach
@@ -1443,7 +1448,7 @@
         }
       } else {
         // Split pane or new tab — always create fresh session
-        var sid = await createSession();
+        var sid = await createSession(tab.label);
         var reattached = false;
       }
 
