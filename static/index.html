@@ -310,6 +310,7 @@
           <span class="speak-dot" style="display:none;"></span>
           &#x1F3A4;
         </button>
+        <button id="sessions-btn" title="Manage sessions">&#x2630;</button>
         <button id="split-btn" title="Split pane (Alt+Shift+D)">&#x229E;</button>
         <button id="close-pane-btn" title="Close pane (Alt+Shift+W)" style="display:none;">&#x2715;</button>
         <button id="next-pane-btn" title="Next pane (Alt+Shift+])" style="display:none;">&#x21C6;</button>
@@ -1118,7 +1119,10 @@
 
     // ── Session Picker Helpers ──────────────────────────────────────
     async function showSessionPicker(term, sessions) {
+      // Returns { sid, reattached }
       return new Promise((resolve) => {
+        let pendingDelete = false;  // guard against double-input during async kill
+
         function renderPicker() {
           term.write('\x1b[2J\x1b[H');  // clear
           term.write('\r\n');
@@ -1134,21 +1138,57 @@
           });
 
           term.write('\r\n  \x1b[1;33mn\x1b[0m  New session\r\n');
+          term.write('  \x1b[1;31md\x1b[0m\x1b[1;31mN\x1b[0m Kill session N (e.g. d2)\r\n');
           term.write('  \x1b[1;31mx\x1b[0m  Kill all and start fresh\r\n');
           term.write('\r\n\x1b[90m  Select:\x1b[0m ');
         }
 
         renderPicker();
 
+        let dPrefix = false;  // waiting for number after 'd'
+
         const disposable = term.onData(data => {
+          if (pendingDelete) return;
+
+          if (dPrefix) {
+            // Expecting a number after 'd'
+            dPrefix = false;
+            const num = parseInt(data);
+            if (num >= 1 && num <= sessions.length) {
+              pendingDelete = true;
+              term.write(data + '\r\n\x1b[90m  Killing session...\x1b[0m');
+              fetch('/api/session/close', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ session_id: sessions[num - 1].session_id })
+              }).then(() => {
+                sessions.splice(num - 1, 1);
+                pendingDelete = false;
+                if (sessions.length === 0) {
+                  disposable.dispose();
+                  createSession().then(sid => resolve({ sid, reattached: false }));
+                } else if (sessions.length === 1) {
+                  disposable.dispose();
+                  _doAttach(term, sessions[0].session_id).then(sid => resolve({ sid, reattached: true }));
+                } else {
+                  renderPicker();
+                }
+              });
+            }
+            return;
+          }
+
           const num = parseInt(data);
           if (num >= 1 && num <= sessions.length) {
             disposable.dispose();
-            _doAttach(term, sessions[num - 1].session_id).then(resolve);
+            _doAttach(term, sessions[num - 1].session_id).then(sid => resolve({ sid, reattached: true }));
+          } else if (data === 'd' || data === 'D') {
+            dPrefix = true;
+            term.write('d');
           } else if (data === 'n' || data === 'N') {
             disposable.dispose();
             term.write('\r\n');
-            createSession().then(sid => resolve(sid));
+            createSession().then(sid => resolve({ sid, reattached: false }));
           } else if (data === 'x' || data === 'X') {
             disposable.dispose();
             term.write('\r\n\x1b[90m  Closing all sessions...\x1b[0m\r\n');
@@ -1158,7 +1198,7 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ session_id: s.session_id })
               })
-            )).then(() => createSession().then(sid => resolve(sid)));
+            )).then(() => createSession().then(sid => resolve({ sid, reattached: false })));
           }
         });
       });
@@ -1360,6 +1400,7 @@
             }
         }
         var sid = await createSession();
+        var reattached = false;
       } else if (!opts.newSession) {
         // PAT is valid, initial page load — check for existing sessions to reattach
         const sessionsResp = await fetch('/api/sessions');
@@ -1386,40 +1427,45 @@
             }
           }
           var sid = await createSession();
+          var reattached = false;
         } else if (liveSessions.length === 1) {
           // One session — auto-reattach
           var sid = await _doAttach(term, liveSessions[0].session_id);
+          var reattached = true;
         } else {
-          // Multiple sessions — show picker
-          var sid = await showSessionPicker(term, liveSessions);
+          // Multiple sessions — show picker (may return reattach or new)
+          var { sid, reattached } = await showSessionPicker(term, liveSessions);
         }
       } else {
         // Split pane or new tab — always create fresh session
         var sid = await createSession();
+        var reattached = false;
       }
 
-      await sendResize(term.cols, term.rows, sid);
+      if (!reattached) {
+        await sendResize(term.cols, term.rows, sid);
 
-      // CoDA splash screen
-      const splashArt = [
-        ' \u2588\u2588\u2588\u2588\u2588\u2588\u2557  \u2588\u2588\u2588\u2588\u2588\u2588\u2557 \u2588\u2588\u2588\u2588\u2588\u2588\u2557  \u2588\u2588\u2588\u2588\u2588\u2557 ',
-        '\u2588\u2588\u2554\u2550\u2550\u2550\u2550\u255d \u2588\u2588\u2554\u2550\u2550\u2550\u2588\u2588\u2557\u2588\u2588\u2554\u2550\u2550\u2588\u2588\u2557\u2588\u2588\u2554\u2550\u2550\u2588\u2588\u2557',
-        '\u2588\u2588\u2551      \u2588\u2588\u2551   \u2588\u2588\u2551\u2588\u2588\u2551  \u2588\u2588\u2551\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2551',
-        '\u2588\u2588\u2551      \u2588\u2588\u2551   \u2588\u2588\u2551\u2588\u2588\u2551  \u2588\u2588\u2551\u2588\u2588\u2554\u2550\u2550\u2588\u2588\u2551',
-        '\u255a\u2588\u2588\u2588\u2588\u2588\u2588\u2557 \u255a\u2588\u2588\u2588\u2588\u2588\u2588\u2554\u255d\u2588\u2588\u2588\u2588\u2588\u2588\u2554\u255d\u2588\u2588\u2551  \u2588\u2588\u2551',
-        ' \u255a\u2550\u2550\u2550\u2550\u2550\u255d  \u255a\u2550\u2550\u2550\u2550\u2550\u255d \u255a\u2550\u2550\u2550\u2550\u2550\u255d \u255a\u2550\u255d  \u255a\u2550\u255d',
-      ];
-      term.write('\x1b[2J\x1b[H');  // clear screen, cursor home
-      term.write('\r\n');
-      splashArt.forEach(line => term.write('\x1b[36m' + line + '\x1b[0m\r\n'));
-      term.write('\r\n');
-      term.write('\x1b[1;37m         CoWorking Developer Agents\x1b[0m\r\n');
-      term.write('\x1b[90m \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\x1b[0m\r\n');
-      term.write('\x1b[90m v' + appVersion + '  \u2502  Ready\x1b[0m\r\n');
-      term.write('\r\n');
-      term.write('\x1b[90m Ctrl+/ for keyboard shortcuts\x1b[0m\r\n');
-      term.write('\x1b[90m Projects in ~/projects auto-sync to Workspace on commit\x1b[0m\r\n');
-      term.write('\r\n');
+        // CoDA splash screen — only for new sessions, not reattach
+        const splashArt = [
+          ' \u2588\u2588\u2588\u2588\u2588\u2588\u2557  \u2588\u2588\u2588\u2588\u2588\u2588\u2557 \u2588\u2588\u2588\u2588\u2588\u2588\u2557  \u2588\u2588\u2588\u2588\u2588\u2557 ',
+          '\u2588\u2588\u2554\u2550\u2550\u2550\u2550\u255d \u2588\u2588\u2554\u2550\u2550\u2550\u2588\u2588\u2557\u2588\u2588\u2554\u2550\u2550\u2588\u2588\u2557\u2588\u2588\u2554\u2550\u2550\u2588\u2588\u2557',
+          '\u2588\u2588\u2551      \u2588\u2588\u2551   \u2588\u2588\u2551\u2588\u2588\u2551  \u2588\u2588\u2551\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2551',
+          '\u2588\u2588\u2551      \u2588\u2588\u2551   \u2588\u2588\u2551\u2588\u2588\u2551  \u2588\u2588\u2551\u2588\u2588\u2554\u2550\u2550\u2588\u2588\u2551',
+          '\u255a\u2588\u2588\u2588\u2588\u2588\u2588\u2557 \u255a\u2588\u2588\u2588\u2588\u2588\u2588\u2554\u255d\u2588\u2588\u2588\u2588\u2588\u2588\u2554\u255d\u2588\u2588\u2551  \u2588\u2588\u2551',
+          ' \u255a\u2550\u2550\u2550\u2550\u2550\u255d  \u255a\u2550\u2550\u2550\u2550\u2550\u255d \u255a\u2550\u2550\u2550\u2550\u2550\u255d \u255a\u2550\u255d  \u255a\u2550\u255d',
+        ];
+        term.write('\x1b[2J\x1b[H');  // clear screen, cursor home
+        term.write('\r\n');
+        splashArt.forEach(line => term.write('\x1b[36m' + line + '\x1b[0m\r\n'));
+        term.write('\r\n');
+        term.write('\x1b[1;37m         CoWorking Developer Agents\x1b[0m\r\n');
+        term.write('\x1b[90m \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\x1b[0m\r\n');
+        term.write('\x1b[90m v' + appVersion + '  \u2502  Ready\x1b[0m\r\n');
+        term.write('\r\n');
+        term.write('\x1b[90m Ctrl+/ for keyboard shortcuts\x1b[0m\r\n');
+        term.write('\x1b[90m Projects in ~/projects auto-sync to Workspace on commit\x1b[0m\r\n');
+        term.write('\r\n');
+      }
 
       const pane = { id, element, term, fitAddon, searchAddon, sessionId: sid };
       term.onData(data => sendInput(data, pane.sessionId));
@@ -1751,6 +1797,38 @@
     document.getElementById('split-btn').addEventListener('click', () => splitPane());
     document.getElementById('close-pane-btn').addEventListener('click', () => closeActivePane());
     document.getElementById('next-pane-btn').addEventListener('click', () => cyclePaneFocus('next'));
+    document.getElementById('sessions-btn').addEventListener('click', async () => {
+      const tab = getActiveTab();
+      if (!tab || tab.panes.length === 0) return;
+      const pane = tab.panes.find(p => p.id === tab.activePaneId) || tab.panes[0];
+      if (!pane.term) return;
+
+      // Fetch live sessions
+      const resp = await fetch('/api/sessions');
+      const liveSessions = (await resp.json()).filter(s => !s.exited);
+
+      if (liveSessions.length === 0) {
+        pane.term.write('\r\n\x1b[90m  No other sessions.\x1b[0m\r\n');
+        return;
+      }
+
+      // Detach current pane from its session (stop polling, leave WS room)
+      pollWorker.postMessage({ type: 'stop_poll', paneId: pane.id });
+      if (pane.sessionId && wsConnected && socket) {
+        socket.emit('leave_session', { session_id: pane.sessionId });
+      }
+
+      // Show picker in this pane
+      const { sid, reattached } = await showSessionPicker(pane.term, liveSessions);
+
+      // Wire up the selected session
+      pane.sessionId = sid;
+      if (wsConnected && socket) {
+        socket.emit('join_session', { session_id: sid });
+      } else {
+        pollWorker.postMessage({ type: 'start_poll', paneId: pane.id, sessionId: sid });
+      }
+    });
 
     // ── Toast Notification ──────────────────────────────────────────
     function showToast(message, type = 'info') {
