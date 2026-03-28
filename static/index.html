@@ -310,7 +310,7 @@
           <span class="speak-dot" style="display:none;"></span>
           &#x1F3A4;
         </button>
-        <button id="sessions-btn" title="Manage sessions">&#x2630;</button>
+        <button id="sessions-btn" title="Manage sessions (Ctrl+Shift+S)">&#x2630;</button>
         <button id="split-btn" title="Split pane (Alt+Shift+D)">&#x229E;</button>
         <button id="close-pane-btn" title="Close pane (Alt+Shift+W)" style="display:none;">&#x2715;</button>
         <button id="next-pane-btn" title="Next pane (Alt+Shift+])" style="display:none;">&#x21C6;</button>
@@ -348,6 +348,7 @@
     <div id="shortcuts-modal">
       <h2>Keyboard Shortcuts <button id="shortcuts-close" title="Close">&times;</button></h2>
       <h3>Tabs</h3>
+      <div class="shortcut-row"><span>Sessions</span><span>Ctrl+Shift+S</span></div>
       <div class="shortcut-row"><span>New tab</span><span>Ctrl+Shift+T</span></div>
       <div class="shortcut-row"><span>Close tab</span><span>Ctrl+Shift+W</span></div>
       <div class="shortcut-row"><span>Next tab</span><span>Ctrl+Shift+]</span></div>
@@ -839,6 +840,10 @@
       }
 
       // ── Tab shortcuts (Ctrl+Shift) ──
+      // Ctrl+Shift+S : manage sessions (picker)
+      if (e.ctrlKey && e.shiftKey && e.key === 'S') {
+        e.preventDefault(); document.getElementById('sessions-btn').click(); return;
+      }
       // Ctrl+Shift+T : new tab
       if (e.ctrlKey && e.shiftKey && e.key === 'T') {
         e.preventDefault(); createTab({ newSession: true }); return;
