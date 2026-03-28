@@ -771,13 +771,15 @@ def get_version():
 @app.route("/api/pat-status")
 def pat_status():
     """Check if a valid, usable PAT is configured."""
+    host = ensure_https(os.environ.get("DATABRICKS_HOST", ""))
     token = os.environ.get("DATABRICKS_TOKEN", "").strip()
-    if not token:
+
+    if not token or pat_rotator.is_token_expired:
+        # No token, or token lifetime exceeded (rotation stopped while no sessions)
         return jsonify({"configured": False, "valid": False,
-                       "workspace_host": os.environ.get("DATABRICKS_HOST", "")})
+                       "workspace_host": host})
 
     # Validate with direct HTTP — avoids SDK auth fallback to SP
-    host = ensure_https(os.environ.get("DATABRICKS_HOST", ""))
     try:
         resp = requests.get(f"{host}/api/2.0/preview/scim/v2/Me",
                            headers={"Authorization": f"Bearer {token}"}, timeout=10)

@@ -38,6 +38,7 @@ class PATRotator:
         self._session_count_fn = session_count_fn or (lambda: 0)
         self._current_token = os.environ.get("DATABRICKS_TOKEN", "").strip() or None
         self._current_token_id = None
+        self._last_rotation_time = None  # set on first successful mint
         self._lock = threading.Lock()
         self._thread = None
         self._stop_event = threading.Event()
@@ -50,6 +51,14 @@ class PATRotator:
     def token(self):
         with self._lock:
             return self._current_token
+
+    @property
+    def is_token_expired(self):
+        """True if the token has likely expired based on last rotation time."""
+        with self._lock:
+            if not self._last_rotation_time or not self._current_token:
+                return self._current_token is None
+            return (time.time() - self._last_rotation_time) > self._token_lifetime
 
     def start(self):
         """Start the background rotation thread."""
@@ -120,6 +129,7 @@ class PATRotator:
         with self._lock:
             self._current_token = new_token
             self._current_token_id = new_token_id
+            self._last_rotation_time = time.time()
         self._persist_token(new_token)
 
         # 3. Revoke old token (best-effort — expires naturally anyway)
