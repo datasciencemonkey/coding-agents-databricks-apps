@@ -41,7 +41,6 @@ jobs:
             # Ignore vulns with no fix available yet (re-evaluate weekly)
             pip-audit -r /tmp/requirements.lock.nohash --desc on \
               --ignore-vuln GHSA-m959-cc7f-wv43 \
-              --ignore-vuln GHSA-gc5v-m9x4-r6x2 \
               --ignore-vuln GHSA-5239-wwwm-4pmq
           else
             echo "::warning::No requirements.lock found — auditing requirements.txt (unpinned)"
