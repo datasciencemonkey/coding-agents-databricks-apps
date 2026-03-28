@@ -740,13 +740,6 @@ def set_security_headers(response):
 
 @app.route("/")
 def index():
-    with setup_lock:
-        status = setup_state["status"]
-    # Only show loading/snake page when setup is actively running.
-    # "pending" means setup hasn't started yet (waiting for PAT) — show index.html
-    # so the PAT prompt can appear in the terminal.
-    if status == "running":
-        return send_from_directory("static", "loading.html")
     return send_from_directory("static", "index.html")
 
 
