@@ -38,9 +38,7 @@ jobs:
             # platform-conditional deps (greenlet) missing from the lockfile.
             # The hashes are verified at install time, not audit time.
             sed '/^[[:space:]]*--hash/d' requirements.lock > /tmp/requirements.lock.nohash
-            # Ignore vulns with no fix available yet (re-evaluate weekly)
-            pip-audit -r /tmp/requirements.lock.nohash --desc on \
-              --ignore-vuln GHSA-m959-cc7f-wv43
+            pip-audit -r /tmp/requirements.lock.nohash --desc on
           else
             echo "::warning::No requirements.lock found — auditing requirements.txt (unpinned)"
             pip-audit -r requirements.txt --desc on
