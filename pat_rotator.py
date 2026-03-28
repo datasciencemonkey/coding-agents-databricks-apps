@@ -165,7 +165,7 @@ class PATRotator:
         """Write rotated token to all persistence layers."""
         os.environ["DATABRICKS_TOKEN"] = token
         self._write_databrickscfg(token)
-        logger.info("PAT persisted: env var + ~/.databrickscfg updated")
+        logger.info("PAT rotated: CLI updated")
 
     def _write_databrickscfg(self, token):
         """Write token to ~/.databrickscfg for CLI/SDK tools."""
