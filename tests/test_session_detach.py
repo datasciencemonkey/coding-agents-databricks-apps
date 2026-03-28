@@ -210,3 +210,45 @@ class TestAttachSession:
             }
         resp = self.client.post("/api/session/attach", json={"session_id": "sess-x"})
         assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Tests for EOF cleanup in read_pty_output
+# ---------------------------------------------------------------------------
+
+
+class TestEOFCleanup:
+    @pytest.fixture(autouse=True)
+    def setup_app(self):
+        import app as app_module
+        self.app_module = app_module
+        yield
+        with app_module.sessions_lock:
+            app_module.sessions.clear()
+
+    def test_exited_session_removed_from_dict(self):
+        import pty
+        master_fd, slave_fd = pty.openpty()
+        proc = subprocess.Popen(
+            ["bash", "-c", "echo hello && exit 0"],
+            stdin=slave_fd, stdout=slave_fd, stderr=slave_fd,
+            preexec_fn=os.setsid
+        )
+        os.close(slave_fd)
+
+        session_id = "sess-eof-test"
+        with self.app_module.sessions_lock:
+            self.app_module.sessions[session_id] = {
+                "pid": proc.pid,
+                "master_fd": master_fd,
+                "output_buffer": deque(maxlen=1000),
+                "lock": threading.Lock(),
+                "last_poll_time": time.time(),
+                "created_at": time.time(),
+            }
+
+        # read_pty_output should detect EOF and call terminate_session
+        self.app_module.read_pty_output(session_id, master_fd)
+
+        with self.app_module.sessions_lock:
+            assert session_id not in self.app_module.sessions

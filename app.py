@@ -629,15 +629,17 @@ def read_pty_output(session_id, fd):
         except OSError:
             break
 
-    # Process exited or fd closed — notify WebSocket clients (AC-9) and mark for HTTP poll
+    # Process exited or fd closed — notify WebSocket clients (AC-9)
     try:
         socketio.emit('session_exited', {'session_id': session_id}, room=session_id)
     except Exception:
         pass
 
-    with session_lock:
-        session["exited"] = True
-        logger.info(f"Session {session_id} process exited")
+    logger.info(f"Session {session_id} process exited")
+
+    # Clean up immediately — no zombie sessions in the picker
+    if session:
+        terminate_session(session_id, session["pid"], session["master_fd"])
 
 
 def terminate_session(session_id, pid, master_fd):
