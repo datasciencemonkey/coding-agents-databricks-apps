@@ -1128,13 +1128,14 @@
             const proc = (s.process || 'bash').padEnd(12);
             const ago = _formatAge(s.created_at);
             const idle = s.idle_seconds > 60 ? ', idle ' + _formatDuration(s.idle_seconds) : '';
-            term.write('  \x1b[1;37m' + proc + '\x1b[0m');
-            term.write('\x1b[90m(' + ago + idle + ')\x1b[0m');
-            term.write('    \x1b[1;32m[Attach]\x1b[0m  \x1b[1;31m[\u2715]\x1b[0m\r\n');
+            term.write('  \x1b[1;32m' + (i + 1) + '\x1b[0m  ');
+            term.write('\x1b[1;37m' + proc + '\x1b[0m');
+            term.write('\x1b[90m(' + ago + idle + ')\x1b[0m\r\n');
           });
 
-          term.write('\r\n  \x1b[1;33m[+ New session]\x1b[0m\r\n');
-          term.write('\r\n\x1b[90m  Type number (1-' + sessions.length + ') to attach, n = new, x = kill all:\x1b[0m ');
+          term.write('\r\n  \x1b[1;33mn\x1b[0m  New session\r\n');
+          term.write('  \x1b[1;31mx\x1b[0m  Kill all and start fresh\r\n');
+          term.write('\r\n\x1b[90m  Select:\x1b[0m ');
         }
 
         renderPicker();
