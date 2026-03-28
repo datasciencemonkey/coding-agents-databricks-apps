@@ -755,7 +755,7 @@ def cleanup_stale_sessions():
 def authorize_request():
     """Check authorization before processing any request."""
     # Skip auth for health check, setup status, and Socket.IO (has own auth via connect event)
-    if request.path in ("/health", "/api/setup-status", "/api/pat-status", "/api/configure-pat", "/api/app-state") or request.path.startswith("/socket.io"):
+    if request.path in ("/health", "/api/setup-status", "/api/pat-status", "/api/configure-pat", "/api/app-state", "/api/sessions") or request.path.startswith("/socket.io"):
         return None
 
     authorized, user = check_authorization()
@@ -806,6 +806,28 @@ def get_setup_status():
 def get_app_state():
     """Admin endpoint: persisted app state (owner, last rotation)."""
     return jsonify(app_state.get_state())
+
+
+@app.route("/api/sessions")
+def list_sessions():
+    """Return a JSON array of active (non-exited) sessions with metadata."""
+    now = time.time()
+    with sessions_lock:
+        snapshot = list(sessions.items())
+
+    result = []
+    for session_id, sess in snapshot:
+        if sess.get("exited"):
+            continue
+        result.append({
+            "session_id": session_id,
+            "created_at": sess.get("created_at"),
+            "last_poll_time": sess.get("last_poll_time"),
+            "exited": False,
+            "process": _get_session_process(sess["pid"]),
+            "idle_seconds": round(now - sess.get("last_poll_time", now), 1),
+        })
+    return jsonify(result)
 
 
 @app.route("/health")

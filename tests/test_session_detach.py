@@ -1,13 +1,16 @@
-"""Tests for _get_session_process() helper.
+"""Tests for session detach & reconnect helpers.
 
-Verifies that the helper correctly detects the foreground child process
-of a shell session, falls back to the shell itself, and returns "unknown"
-for dead or invalid PIDs.
+Covers:
+- _get_session_process() — foreground child detection
+- GET /api/sessions — list active sessions with metadata
 """
 
+import os
 import subprocess
 import sys
+import threading
 import time
+from collections import deque
 from unittest import mock
 
 import pytest
@@ -88,3 +91,59 @@ class TestGetSessionProcess:
 
         assert app_mod._get_session_process(-1) == "unknown"
         assert app_mod._get_session_process(0) == "unknown"
+
+
+# ---------------------------------------------------------------------------
+# Tests for GET /api/sessions
+# ---------------------------------------------------------------------------
+
+
+class TestListSessions:
+    """Tests for the GET /api/sessions endpoint."""
+
+    @pytest.fixture(autouse=True)
+    def setup_app(self):
+        app_module = _get_app()
+        app_module.app_owner = "test@example.com"
+        self.client = app_module.app.test_client()
+        self.app_module = app_module
+        yield
+        with app_module.sessions_lock:
+            app_module.sessions.clear()
+
+    def test_returns_empty_list(self):
+        resp = self.client.get("/api/sessions")
+        assert resp.status_code == 200
+        assert resp.get_json() == []
+
+    def test_returns_session_with_metadata(self):
+        # Add a session with our own PID (so ps works)
+        now = time.time()
+        with self.app_module.sessions_lock:
+            self.app_module.sessions["sess-1"] = {
+                "pid": os.getpid(),
+                "master_fd": 0,
+                "output_buffer": deque(maxlen=1000),
+                "lock": threading.Lock(),
+                "last_poll_time": now - 120,
+                "created_at": now - 3600,
+            }
+        resp = self.client.get("/api/sessions")
+        data = resp.get_json()
+        assert len(data) == 1
+        assert data[0]["session_id"] == "sess-1"
+        assert "process" in data[0]
+        assert "idle_seconds" in data[0]
+
+    def test_excludes_exited_sessions(self):
+        with self.app_module.sessions_lock:
+            self.app_module.sessions["dead"] = {
+                "pid": 1, "master_fd": 0,
+                "output_buffer": deque(maxlen=1000),
+                "lock": threading.Lock(),
+                "last_poll_time": time.time(),
+                "created_at": time.time(),
+                "exited": True,
+            }
+        resp = self.client.get("/api/sessions")
+        assert resp.get_json() == []
