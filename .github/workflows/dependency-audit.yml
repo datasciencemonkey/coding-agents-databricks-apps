@@ -40,8 +40,7 @@ jobs:
             sed '/^[[:space:]]*--hash/d' requirements.lock > /tmp/requirements.lock.nohash
             # Ignore vulns with no fix available yet (re-evaluate weekly)
             pip-audit -r /tmp/requirements.lock.nohash --desc on \
-              --ignore-vuln GHSA-m959-cc7f-wv43 \
-              --ignore-vuln GHSA-5239-wwwm-4pmq
+              --ignore-vuln GHSA-m959-cc7f-wv43
           else
             echo "::warning::No requirements.lock found — auditing requirements.txt (unpinned)"
             pip-audit -r requirements.txt --desc on
