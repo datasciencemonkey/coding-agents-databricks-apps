@@ -374,20 +374,35 @@ def run_setup():
 
 
 def get_token_owner():
-    """Get the owner email. Priority: Apps API (app.creator) > PAT (current_user.me).
+    """Get the owner email.
 
-    Uses the auto-provisioned SP to call the Apps API — no PAT needed for
-    owner resolution. Falls back to PAT-based lookup for backward compat.
+    Priority: APP_OWNER_EMAIL env var > app description > app.creator > PAT.
+    The spawner sets owner:{email} in the app description when creating apps on
+    behalf of users, so the child app knows its owner without requiring a PAT.
     """
     from databricks.sdk import WorkspaceClient
+
+    # 0. Explicit owner from deployer (env var)
+    explicit_owner = os.environ.get("APP_OWNER_EMAIL", "").strip()
+    if explicit_owner:
+        logger.info(f"Owner resolved from APP_OWNER_EMAIL: {explicit_owner}")
+        return explicit_owner
 
     # 1. Try Apps API via SP credentials (no PAT needed)
     app_name = os.environ.get("DATABRICKS_APP_NAME")
     if app_name:
         try:
             w = WorkspaceClient()  # auto-detects SP credentials
-            app = w.apps.get(name=app_name)
-            owner = app.creator
+            app_info = w.apps.get(name=app_name)
+
+            # Spawner sets owner in description as "owner:{email}"
+            desc = getattr(app_info, "description", "") or ""
+            if desc.startswith("owner:"):
+                owner = desc.split(":", 1)[1].strip()
+                logger.info(f"Owner resolved from app description: {owner}")
+                return owner
+
+            owner = app_info.creator
             logger.info(f"Owner resolved from app.creator: {owner}")
             return owner
         except Exception as e:
