@@ -203,7 +203,6 @@ This template repo opens that vision up for every Databricks user — no IDE set
 | **DeepWiki** | Ask questions about any GitHub repo — gets AI-powered answers from the codebase |
 | **Exa** | Web search and code context retrieval for up-to-date information |
 
-Optionally, set `TEAM_MEMORY_MCP_URL` to enable the **team-memory** MCP server for shared context across sessions.
 
 </details>
 
@@ -287,7 +286,6 @@ Optionally, set `TEAM_MEMORY_MCP_URL` to enable the **team-memory** MCP server f
 | `CODEX_MODEL` | No | Codex model name (default: `databricks-gpt-5-2`) |
 | `GEMINI_MODEL` | No | Gemini model name (default: `databricks-gemini-3-1-pro`) |
 | `DATABRICKS_GATEWAY_HOST` | No | AI Gateway URL (recommended) |
-| `TEAM_MEMORY_MCP_URL` | No | Enables the team-memory MCP server for shared context |
 
 ### Security Model
 
