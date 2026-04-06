@@ -14,7 +14,7 @@ USER_EMAIL    = $(shell databricks current-user me --profile $(PROFILE) --output
 WORKSPACE_PATH = /Workspace/Users/$(USER_EMAIL)/apps/$(APP_NAME)
 HOST          = $(shell databricks auth env --profile $(PROFILE) 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin)['env']['DATABRICKS_HOST'])")
 
-.PHONY: help run deploy redeploy create-app sync-template sync deploy-app status logs
+.PHONY: help run deploy redeploy create-app sync-template sync deploy-app status logs test
 
 run: ## Wait for app to be running and print URL
 	@echo "==> Waiting for '$(APP_NAME)' to be running..."
@@ -30,6 +30,10 @@ run: ## Wait for app to be running and print URL
 		sleep 10; \
 	done; \
 	echo "    Timed out waiting for app to reach RUNNING state."
+
+test: ## Run spawner gate tests (AC-1 through AC-12)
+	@echo "==> Running spawner gate tests..."
+	cd .. && uv run pytest tests/gates/test_spawner_*.py -v --tb=short
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
