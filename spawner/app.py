@@ -431,10 +431,12 @@ def api_provision():
     except RuntimeError as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
-    # Identity comes from SSO headers — no PAT needed
-    email = request.headers.get("X-Forwarded-Email", "").strip()
+    # Identity: use email from POST body (admin provisioning for another user),
+    # fall back to SSO header (self-provisioning)
+    body = request.get_json(silent=True) or {}
+    email = (body.get("email") or request.headers.get("X-Forwarded-Email", "")).strip()
     if not email:
-        return jsonify({"success": False, "error": "No user identity (X-Forwarded-Email)"}), 400
+        return jsonify({"success": False, "error": "No user identity provided"}), 400
 
     app_name = app_name_from_email(email)
 

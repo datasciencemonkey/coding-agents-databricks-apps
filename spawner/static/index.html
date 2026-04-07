@@ -69,15 +69,14 @@
     }
 
     label { display: block; font-size: 13px; font-weight: 500; color: var(--dbx-text-muted); margin-bottom: 6px; }
-    input[type="password"] {
+    input[type="email"] {
       width: 100%; padding: 10px 14px; font-size: 14px;
-      font-family: 'SF Mono', SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
       background: var(--dbx-dark); border: 1px solid var(--dbx-border);
       border-radius: 6px; color: var(--dbx-text); outline: none;
       transition: border-color 0.15s;
     }
-    input[type="password"]:focus { border-color: var(--dbx-red); }
-    input[type="password"]::placeholder { color: #484F58; }
+    input[type="email"]:focus { border-color: var(--dbx-red); }
+    input[type="email"]::placeholder { color: #484F58; }
     .field-help { font-size: 12px; color: var(--dbx-text-muted); margin-top: 6px; line-height: 1.4; }
     .field-help strong { color: var(--dbx-text); }
 
@@ -160,19 +159,19 @@
 <div class="main">
   <div class="hero">
     <h1>Deploy Your Coding Agent</h1>
-    <p>Get a personal AI-powered coding environment on Databricks. Paste your Personal Access Token below and we'll provision everything for you.</p>
+    <p>Get a personal AI-powered coding environment on Databricks. One click and we'll provision everything for you.</p>
   </div>
 
   <div class="card">
     <div class="card-header">
-      Setup
-      <span class="badge">One-time</span>
+      Deploy
+      <span class="badge">One-click</span>
     </div>
-    <label for="pat">Personal Access Token</label>
-    <input type="password" id="pat" placeholder="dapi..." autocomplete="off" />
+    <label for="email">Deploy for</label>
+    <input type="email" id="email" autocomplete="off" />
     <p class="field-help">
-      Create a PAT at <strong>Settings &rarr; Developer &rarr; Access tokens</strong> with all access scopes.<br>
-      Your app will be named <strong id="app-name-preview"></strong>.
+      App will be named <strong id="app-name-preview"></strong>.<br>
+      No tokens needed &mdash; change the email to provision for another user.
     </p>
     <button class="btn-primary" id="btn" onclick="deploy()">
       <svg viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
@@ -200,26 +199,40 @@
 const userEmail = document.body.getAttribute('data-email') || 'unknown';
 const appName = document.body.getAttribute('data-app-name') || 'coding-agents-you';
 document.getElementById('user-email').textContent = userEmail;
-document.getElementById('app-name-preview').textContent = appName;
+
+const emailInput = document.getElementById('email');
+emailInput.value = userEmail;
+updateAppNamePreview();
+
+function appNameFromEmail(email) {
+  const slug = email.split('@')[0].replace(/[._]/g, '-').toLowerCase();
+  return 'coding-agents-' + slug;
+}
+
+function updateAppNamePreview() {
+  const email = emailInput.value.trim();
+  document.getElementById('app-name-preview').textContent = email ? appNameFromEmail(email) : 'coding-agents-...';
+}
+emailInput.addEventListener('input', updateAppNamePreview);
 
 let pollTimer = null;
 
 async function deploy() {
-  const pat = document.getElementById('pat').value.trim();
-  if (!pat) { alert('Please enter your Personal Access Token.'); return; }
+  const email = emailInput.value.trim();
+  if (!email) { alert('Please enter an email address.'); return; }
   const btn = document.getElementById('btn');
   const status = document.getElementById('status');
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Starting...';
   status.style.display = 'block';
   status.className = 'status-progress';
-  status.innerHTML = '<ul class="step-list"><li class="step-active"><span class="step-icon"><span class="spinner-sm"></span></span><span class="step-msg">Verifying your identity...</span></li></ul>';
+  status.innerHTML = '<ul class="step-list"><li class="step-active"><span class="step-icon"><span class="spinner-sm"></span></span><span class="step-msg">Provisioning for ' + email + '...</span></li></ul>';
 
   try {
     const resp = await fetch('/api/provision', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pat: pat })
+      body: JSON.stringify({ email: email })
     });
     const data = await resp.json();
 
