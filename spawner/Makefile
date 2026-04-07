@@ -54,7 +54,7 @@ create-app: ## Create the spawner app (idempotent)
 sync-template: ## Sync coding-agents source to shared template path
 	@echo "==> Syncing coding-agents template to $(TEMPLATE_SRC)..."
 	@databricks workspace mkdirs /Workspace/Shared/apps --profile $(PROFILE) 2>/dev/null || true
-	@cd .. && databricks sync . $(TEMPLATE_SRC) --watch=false --profile $(PROFILE)
+	@cd .. && databricks sync . $(TEMPLATE_SRC) --watch=false --exclude-from .syncignore --profile $(PROFILE)
 	@# Override app.yaml with template defaults (no pre-loaded token — users paste PAT in CODA)
 	@echo "    Uploading template app.yaml..."
 	@# Resolve team-memory-mcp app URL (if deployed)
@@ -72,7 +72,7 @@ sync-template: ## Sync coding-agents source to shared template path
 
 sync: ## Sync spawner source to workspace
 	@echo "==> Syncing spawner to $(WORKSPACE_PATH)..."
-	@databricks sync . $(WORKSPACE_PATH) --watch=false --profile $(PROFILE)
+	@databricks sync . $(WORKSPACE_PATH) --watch=false --exclude-from ../.syncignore --profile $(PROFILE)
 
 deploy-app: ## Deploy the spawner app
 	@echo "==> Deploying '$(APP_NAME)'..."
