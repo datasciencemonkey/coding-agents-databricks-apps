@@ -60,22 +60,22 @@ def read_settings(tmp_path):
 class TestMlflowEnvVars:
     """Verify MLflow environment variables are added to settings.json."""
 
-    def test_tracing_enabled_by_default(self, tmp_path):
+    def test_tracing_disabled_by_default(self, tmp_path):
         write_existing_settings(tmp_path, {"env": {"ANTHROPIC_MODEL": "test"}})
         result = run_setup_mlflow(tmp_path, {"APP_OWNER": "jane@company.com"})
         assert result.returncode == 0
         settings = read_settings(tmp_path)
-        assert settings["env"]["MLFLOW_CLAUDE_TRACING_ENABLED"] == "true"
+        assert settings["env"]["MLFLOW_CLAUDE_TRACING_ENABLED"] == "false"
 
-    def test_tracing_disabled_when_env_false(self, tmp_path):
+    def test_tracing_enabled_when_env_true(self, tmp_path):
         write_existing_settings(tmp_path, {"env": {"ANTHROPIC_MODEL": "test"}})
         result = run_setup_mlflow(tmp_path, {
             "APP_OWNER": "jane@company.com",
-            "MLFLOW_CLAUDE_TRACING_ENABLED": "false",
+            "MLFLOW_CLAUDE_TRACING_ENABLED": "true",
         })
         assert result.returncode == 0
         settings = read_settings(tmp_path)
-        assert settings["env"]["MLFLOW_CLAUDE_TRACING_ENABLED"] == "false"
+        assert settings["env"]["MLFLOW_CLAUDE_TRACING_ENABLED"] == "true"
 
     def test_tracking_uri(self, tmp_path):
         write_existing_settings(tmp_path, {"env": {}})
@@ -109,30 +109,33 @@ class TestMlflowEnvVars:
 class TestStopHook:
     """Verify the MLflow Stop hook is only added when tracing is enabled."""
 
-    def test_stop_hook_present_by_default(self, tmp_path):
+    def test_stop_hook_absent_by_default(self, tmp_path):
         write_existing_settings(tmp_path, {"env": {}})
         result = run_setup_mlflow(tmp_path, {"APP_OWNER": "jane@company.com"})
+        assert result.returncode == 0
+        settings = read_settings(tmp_path)
+        stop_hooks = settings.get("hooks", {}).get("Stop", [])
+        assert len(stop_hooks) == 0
+
+    def test_stop_hook_present_when_tracing_enabled(self, tmp_path):
+        write_existing_settings(tmp_path, {"env": {}})
+        result = run_setup_mlflow(tmp_path, {
+            "APP_OWNER": "jane@company.com",
+            "MLFLOW_CLAUDE_TRACING_ENABLED": "true",
+        })
         assert result.returncode == 0
         settings = read_settings(tmp_path)
         assert "hooks" in settings
         assert "Stop" in settings["hooks"]
         assert len(settings["hooks"]["Stop"]) == 1
 
-    def test_stop_hook_absent_when_tracing_disabled(self, tmp_path):
-        write_existing_settings(tmp_path, {"env": {}})
-        result = run_setup_mlflow(tmp_path, {
-            "APP_OWNER": "jane@company.com",
-            "MLFLOW_CLAUDE_TRACING_ENABLED": "false",
-        })
-        assert result.returncode == 0
-        settings = read_settings(tmp_path)
-        stop_hooks = settings.get("hooks", {}).get("Stop", [])
-        assert len(stop_hooks) == 0
-
     def test_stop_hook_uses_project_flag(self, tmp_path):
         """Hook must use --project to resolve mlflow from the app's venv."""
         write_existing_settings(tmp_path, {"env": {}})
-        result = run_setup_mlflow(tmp_path, {"APP_OWNER": "jane@company.com"})
+        result = run_setup_mlflow(tmp_path, {
+            "APP_OWNER": "jane@company.com",
+            "MLFLOW_CLAUDE_TRACING_ENABLED": "true",
+        })
         assert result.returncode == 0
         settings = read_settings(tmp_path)
         hook = settings["hooks"]["Stop"][0]["hooks"][0]
@@ -163,7 +166,7 @@ class TestSettingsMerge:
         assert settings["env"]["ANTHROPIC_MODEL"] == "databricks-claude-opus-4-6"
         assert settings["env"]["ANTHROPIC_BASE_URL"] == "https://test.com/anthropic"
         assert settings["env"]["ANTHROPIC_AUTH_TOKEN"] == "secret"
-        assert settings["env"]["MLFLOW_CLAUDE_TRACING_ENABLED"] == "true"
+        assert settings["env"]["MLFLOW_CLAUDE_TRACING_ENABLED"] == "false"
 
     def test_preserves_existing_hooks(self, tmp_path):
         write_existing_settings(tmp_path, {
@@ -172,7 +175,10 @@ class TestSettingsMerge:
                 "PreToolUse": [{"hooks": [{"type": "command", "command": "echo pre"}]}]
             }
         })
-        result = run_setup_mlflow(tmp_path, {"APP_OWNER": "jane@company.com"})
+        result = run_setup_mlflow(tmp_path, {
+            "APP_OWNER": "jane@company.com",
+            "MLFLOW_CLAUDE_TRACING_ENABLED": "true",
+        })
         assert result.returncode == 0
         settings = read_settings(tmp_path)
         assert "PreToolUse" in settings["hooks"]

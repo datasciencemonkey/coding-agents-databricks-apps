@@ -196,6 +196,16 @@ def _setup_git_config():
         f.write("\n".join(lines) + "\n")
     logger.info(f"Git config written to {gitconfig_path}")
 
+    # Configure gh as the git credential helper (if gh is available)
+    try:
+        subprocess.run(
+            ["gh", "auth", "setup-git"],
+            capture_output=True, timeout=10,
+        )
+        logger.info("gh auth setup-git configured")
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        logger.debug("gh not available, skipping credential helper setup")
+
     # Write post-commit hook for workspace sync (works from any CLI: Claude, Gemini, OpenCode, etc.)
     # Only syncs repos inside ~/projects/ — skips the app source and any other repos
     post_commit = os.path.join(hooks_dir, "post-commit")
