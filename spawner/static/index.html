@@ -177,7 +177,7 @@
       <svg viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
       Deploy My Coding Agent
     </button>
-    <div id="status"></div>
+    <div id="active-provisions" style="margin-top:20px;display:flex;flex-direction:column;gap:8px;"></div>
   </div>
 
   <div class="card">
@@ -215,18 +215,15 @@ function updateAppNamePreview() {
 }
 emailInput.addEventListener('input', updateAppNamePreview);
 
-let pollTimer = null;
+// Track active provisions by app name -> poll timer
+const activePollers = {};
 
 async function deploy() {
   const email = emailInput.value.trim();
   if (!email) { alert('Please enter an email address.'); return; }
   const btn = document.getElementById('btn');
-  const status = document.getElementById('status');
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Starting...';
-  status.style.display = 'block';
-  status.className = 'status-progress';
-  status.innerHTML = '<ul class="step-list"><li class="step-active"><span class="step-icon"><span class="spinner-sm"></span></span><span class="step-msg">Provisioning for ' + email + '...</span></li></ul>';
 
   try {
     const resp = await fetch('/api/provision', {
@@ -237,69 +234,87 @@ async function deploy() {
     const data = await resp.json();
 
     if (!data.success) {
-      status.className = 'status-error';
-      status.textContent = 'Error: ' + (data.error || 'Unknown error');
+      alert('Error: ' + (data.error || 'Unknown error'));
       resetBtn();
       return;
     }
 
     if (data.already_running) {
-      status.className = 'status-success';
-      status.innerHTML = '&#10003; App already running &mdash; token refreshed.\n\n'
-        + 'URL: <a href="' + data.app_url + '">' + data.app_url + '</a>';
+      addProvisionCard(data.app_name, email, 'success',
+        '&#10003; Already running &mdash; <a href="' + data.app_url + '" style="color:var(--dbx-green);">Open</a>');
       resetBtn();
       loadApps();
       return;
     }
 
-    // Start polling for progress
-    btn.innerHTML = '<span class="spinner"></span> Provisioning...';
+    if (data.already_in_progress) {
+      // Already tracking — just reset the button
+      resetBtn();
+      return;
+    }
+
+    // Add a card and start polling
+    addProvisionCard(data.app_name, email, 'progress', 'Starting...');
     pollProvisionStatus(data.app_name);
+    resetBtn();
 
   } catch (e) {
-    status.className = 'status-error';
-    status.textContent = 'Request failed: ' + e.message;
+    alert('Request failed: ' + e.message);
     resetBtn();
   }
 }
 
-function pollProvisionStatus(appName) {
-  if (pollTimer) clearInterval(pollTimer);
+function addProvisionCard(appName, email, state, html) {
+  const container = document.getElementById('active-provisions');
+  let card = document.getElementById('prov-' + appName);
+  if (!card) {
+    card = document.createElement('div');
+    card.id = 'prov-' + appName;
+    card.style.cssText = 'font-size:13px;font-family:"SF Mono",SFMono-Regular,Consolas,monospace;background:var(--dbx-dark);border:1px solid var(--dbx-border);border-radius:6px;padding:12px 16px;line-height:1.6;';
+    container.prepend(card);
+  }
+  if (state === 'success') {
+    card.style.borderColor = 'rgba(63,185,80,0.3)';
+    card.style.color = 'var(--dbx-green)';
+  } else if (state === 'error') {
+    card.style.borderColor = 'rgba(248,81,73,0.3)';
+    card.style.color = 'var(--dbx-error)';
+  } else {
+    card.style.borderColor = 'rgba(88,166,255,0.3)';
+    card.style.color = 'var(--dbx-text-muted)';
+  }
+  card.innerHTML = '<div style="font-weight:600;margin-bottom:4px;color:var(--dbx-text);font-size:12px;">' + appName + ' <span style="font-weight:400;color:var(--dbx-text-muted);">(' + email + ')</span></div>' + html;
+  return card;
+}
 
-  pollTimer = setInterval(async () => {
+function pollProvisionStatus(appName) {
+  if (activePollers[appName]) clearInterval(activePollers[appName]);
+
+  activePollers[appName] = setInterval(async () => {
     try {
       const resp = await fetch('/api/provision-status/' + encodeURIComponent(appName));
       const data = await resp.json();
       if (!data.found) return;
 
-      renderSteps(data);
-      loadApps();
+      const email = data.email || appName;
 
       if (data.status === 'complete') {
-        clearInterval(pollTimer);
-        pollTimer = null;
-        const status = document.getElementById('status');
-        status.className = 'status-success';
+        clearInterval(activePollers[appName]);
+        delete activePollers[appName];
         const url = data.app_url || '';
-        status.innerHTML = renderStepsHTML(data.steps, true)
-          + (url ? '\n<a href="' + url + '" style="color:var(--dbx-green);font-weight:600;">&rarr; Open ' + appName + '</a>' : '');
-        resetBtn();
+        addProvisionCard(appName, email, 'success',
+          renderStepsHTML(data.steps, true)
+          + (url ? '<a href="' + url + '" style="color:var(--dbx-green);font-weight:600;">&rarr; Open</a>' : ''));
+        loadApps();
       } else if (data.status === 'error') {
-        clearInterval(pollTimer);
-        pollTimer = null;
-        const status = document.getElementById('status');
-        status.className = 'status-error';
-        status.innerHTML = renderStepsHTML(data.steps, false);
-        resetBtn();
+        clearInterval(activePollers[appName]);
+        delete activePollers[appName];
+        addProvisionCard(appName, email, 'error', renderStepsHTML(data.steps, false));
+      } else {
+        addProvisionCard(appName, email, 'progress', renderStepsHTML(data.steps, false));
       }
     } catch (e) { /* keep polling */ }
   }, 3000);
-}
-
-function renderSteps(data) {
-  const status = document.getElementById('status');
-  status.className = 'status-progress';
-  status.innerHTML = renderStepsHTML(data.steps, false);
 }
 
 function renderStepsHTML(steps, finished) {

@@ -538,6 +538,64 @@ def api_provision():
     return jsonify({"success": True, "app_name": app_name})
 
 
+@app.route("/api/provision-bulk", methods=["POST"])
+def api_provision_bulk():
+    """Provision apps for multiple users in parallel.
+
+    Accepts {"emails": ["a@example.com", "b@example.com", ...]}.
+    Kicks off a background thread per user (reuses the single-user flow)
+    and returns the list of app names to poll via /api/provision-status/<name>.
+    """
+    try:
+        admin_token = get_admin_token()
+    except RuntimeError as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+    body = request.get_json(silent=True) or {}
+    emails = body.get("emails", [])
+    if not emails or not isinstance(emails, list):
+        return jsonify({"success": False, "error": "Provide a list of emails"}), 400
+
+    host = DATABRICKS_HOST
+    results = []
+
+    for email in emails:
+        email = email.strip()
+        if not email:
+            continue
+        app_name = app_name_from_email(email)
+
+        # Skip if already running or already provisioning
+        existing = check_existing_app(host, admin_token, app_name)
+        if existing.get("deployed") and existing.get("state") == "RUNNING":
+            results.append({"email": email, "app_name": app_name, "status": "already_running"})
+            continue
+
+        with _provision_lock:
+            existing_job = _provision_jobs.get(app_name)
+            if existing_job and existing_job["status"] == "in_progress":
+                results.append({"email": email, "app_name": app_name, "status": "already_in_progress"})
+                continue
+
+            _provision_jobs[app_name] = {
+                "steps": [{"step": 0, "status": "starting", "message": f"Provisioning for {email}..."}],
+                "status": "in_progress",
+                "app_url": "",
+                "app_name": app_name,
+                "email": email,
+            }
+
+        thread = threading.Thread(
+            target=provision_app_async,
+            args=(host, admin_token, email, app_name),
+            daemon=True,
+        )
+        thread.start()
+        results.append({"email": email, "app_name": app_name, "status": "started"})
+
+    return jsonify({"success": True, "apps": results})
+
+
 @app.route("/api/provision-status/<app_name>")
 def api_provision_status(app_name):
     """Poll endpoint for provision progress."""
