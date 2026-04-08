@@ -383,6 +383,9 @@ def get_token_owner():
     Priority: APP_OWNER_EMAIL env var > app description > app.creator > PAT.
     The spawner sets owner:{email} in the app description when creating apps on
     behalf of users, so the child app knows its owner without requiring a PAT.
+
+    The Apps API call retries with backoff because the app's auto-provisioned SP
+    credentials may not be ready for OAuth token exchange immediately at boot.
     """
     from databricks.sdk import WorkspaceClient
 
@@ -392,25 +395,35 @@ def get_token_owner():
         logger.info(f"Owner resolved from APP_OWNER_EMAIL: {explicit_owner}")
         return explicit_owner
 
-    # 1. Try Apps API via SP credentials (no PAT needed)
+    # 1. Try Apps API via SP credentials (no PAT needed) — retry for SP propagation
     app_name = os.environ.get("DATABRICKS_APP_NAME")
     if app_name:
-        try:
-            w = WorkspaceClient()  # auto-detects SP credentials
-            app_info = w.apps.get(name=app_name)
+        max_retries = 6
+        base_delay = 5.0
+        for attempt in range(max_retries):
+            try:
+                w = WorkspaceClient()  # auto-detects SP credentials
+                app_info = w.apps.get(name=app_name)
 
-            # Spawner sets owner in description as "owner:{email}"
-            desc = getattr(app_info, "description", "") or ""
-            if desc.startswith("owner:"):
-                owner = desc.split(":", 1)[1].strip()
-                logger.info(f"Owner resolved from app description: {owner}")
+                # Spawner sets owner in description as "owner:{email}"
+                desc = getattr(app_info, "description", "") or ""
+                if desc.startswith("owner:"):
+                    owner = desc.split(":", 1)[1].strip()
+                    logger.info(f"Owner resolved from app description: {owner}")
+                    return owner
+
+                owner = app_info.creator
+                logger.info(f"Owner resolved from app.creator: {owner}")
                 return owner
-
-            owner = app_info.creator
-            logger.info(f"Owner resolved from app.creator: {owner}")
-            return owner
-        except Exception as e:
-            logger.warning(f"Could not resolve owner via Apps API: {e}")
+            except Exception as e:
+                delay = min(base_delay * (2**attempt), 60)
+                logger.warning(
+                    f"Apps API call failed (attempt {attempt + 1}/{max_retries}): {e}"
+                    f" — retrying in {delay:.0f}s"
+                )
+                if attempt < max_retries - 1:
+                    time.sleep(delay)
+        logger.error(f"Could not resolve owner via Apps API after {max_retries} attempts")
 
     # 2. Fallback: PAT-based resolution
     try:

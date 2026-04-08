@@ -76,6 +76,56 @@ class TestAc7:
             assert "/unity-catalog/permissions/volume/main.coda.coda-wheels" in url2
             assert body2["changes"][0]["add"] == ["READ_VOLUME"]
 
+    def test_ac7_retries_on_principal_not_found(self):
+        """If the SP hasn't propagated yet (404), grants are retried."""
+        with mock.patch.dict(
+            "os.environ",
+            {
+                "DATABRICKS_HOST": "https://test.databricks.com",
+                "WHEELS_VOLUME_CATALOG": "main",
+                "WHEELS_VOLUME_SCHEMA": "coda",
+                "WHEELS_VOLUME_NAME": "coda-wheels",
+            },
+        ):
+            import importlib
+            import spawner.app as spawner_mod
+
+            importlib.reload(spawner_mod)
+
+        # First call: 404 PRINCIPAL_DOES_NOT_EXIST, second call: success
+        fail_resp = mock.Mock()
+        fail_resp.ok = False
+        fail_resp.status_code = 404
+        fail_resp.text = '{"error_code":"PRINCIPAL_DOES_NOT_EXIST","message":"..."}'
+
+        ok_resp = mock.Mock()
+        ok_resp.ok = True
+        ok_resp.status_code = 200
+
+        app_result = {
+            "name": "coding-agents-david-okeeffe",
+            "service_principal_name": "sp-name-123",
+        }
+
+        with (
+            mock.patch.object(
+                spawner_mod.requests, "patch", side_effect=[fail_resp, ok_resp] * 3
+            ) as mock_patch,
+            mock.patch("spawner.app.time.sleep") as mock_sleep,
+        ):
+            spawner_mod.grant_sp_volume_access(
+                host="https://test.databricks.com",
+                auth_token="fake-admin-token",
+                app_result=app_result,
+            )
+
+            # Each grant should retry once (fail then succeed) = 6 total PATCH calls
+            assert mock_patch.call_count == 6
+            # Should have slept 3 times (once per grant retry)
+            assert mock_sleep.call_count == 3
+            # First retry delay should be 5s (base_delay)
+            mock_sleep.assert_any_call(5.0)
+
     def test_ac7_skips_grant_if_no_sp_name(self):
         """If the app result has no service_principal_name, grants are skipped."""
         with mock.patch.dict(

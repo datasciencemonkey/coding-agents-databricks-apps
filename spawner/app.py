@@ -106,6 +106,25 @@ def app_name_from_email(email: str) -> str:
     return f"{prefix}{truncated_slug}-{hash_suffix}"
 
 
+def _ensure_owner_description(
+    host: str, admin_token: str, app_name: str, owner_email: str
+) -> None:
+    """PATCH the app description to owner:{email} on re-provision.
+
+    When an app already exists (409 on create), the description may be missing
+    or stale. This ensures the child app can always resolve its owner.
+    """
+    resp = requests.patch(
+        f"{host}/api/2.0/apps/{app_name}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+        json={"description": f"owner:{owner_email}"},
+    )
+    if resp.ok:
+        print(f"  Updated app description to owner:{owner_email}")
+    else:
+        print(f"  Warning: could not update description ({resp.status_code}): {resp.text[:200]}")
+
+
 def create_app(host: str, admin_token: str, app_name: str, owner_email: str) -> dict:
     """Create the Databricks App via POST /api/2.0/apps.
 
@@ -121,8 +140,9 @@ def create_app(host: str, admin_token: str, app_name: str, owner_email: str) -> 
             "description": f"owner:{owner_email}",
         },
     )
-    # 409 means app already exists -- that's fine for re-provisioning
+    # 409 means app already exists -- ensure description has owner:{email}
     if resp.status_code == 409:
+        _ensure_owner_description(host, admin_token, app_name, owner_email)
         return check_existing_app(host, admin_token, app_name)
     resp.raise_for_status()
     return resp.json()
@@ -168,6 +188,50 @@ def deploy_app(
     return resp.json()
 
 
+def _grant_with_retry(
+    host: str,
+    headers: dict,
+    securable_type: str,
+    full_name: str,
+    privileges: list[str],
+    sp_name: str,
+    max_retries: int = 6,
+    base_delay: float = 5.0,
+) -> bool:
+    """Grant UC permissions, retrying if the principal doesn't exist yet.
+
+    After app creation the service principal can take 10-30s to propagate into
+    Unity Catalog's identity store. Retries with exponential backoff (5s, 10s,
+    20s, 40s, 60s, 60s) for up to ~3 minutes.
+    """
+    for attempt in range(max_retries):
+        resp = requests.patch(
+            f"{host}/api/2.1/unity-catalog/permissions/{securable_type}/{full_name}",
+            headers=headers,
+            json={"changes": [{"add": privileges, "principal": sp_name}]},
+        )
+        if resp.ok:
+            print(f"  Granted {privileges} on {securable_type} {full_name} to {sp_name}")
+            return True
+
+        # Retry only on PRINCIPAL_DOES_NOT_EXIST — the SP hasn't propagated yet
+        if resp.status_code == 404 and "PRINCIPAL_DOES_NOT_EXIST" in resp.text:
+            delay = min(base_delay * (2**attempt), 60)
+            print(
+                f"  SP not propagated yet, retrying in {delay:.0f}s "
+                f"(attempt {attempt + 1}/{max_retries})..."
+            )
+            time.sleep(delay)
+            continue
+
+        # Any other error is not retryable
+        print(f"  Warning: grant failed ({resp.status_code}): {resp.text[:200]}")
+        return False
+
+    print(f"  Error: SP {sp_name} not found after {max_retries} retries, skipping grant")
+    return False
+
+
 def grant_sp_volume_access(host: str, auth_token: str, app_result: dict) -> None:
     """Grant the app's SP read access to the coda-wheels UC Volume.
 
@@ -193,17 +257,7 @@ def grant_sp_volume_access(host: str, auth_token: str, app_result: dict) -> None
     ]
 
     for securable_type, full_name, privileges in grants:
-        resp = requests.patch(
-            f"{host}/api/2.1/unity-catalog/permissions/{securable_type}/{full_name}",
-            headers=headers,
-            json={"changes": [{"add": privileges, "principal": sp_name}]},
-        )
-        if resp.ok:
-            print(
-                f"  Granted {privileges} on {securable_type} {full_name} to {sp_name}"
-            )
-        else:
-            print(f"  Warning: grant failed ({resp.status_code}): {resp.text[:200]}")
+        _grant_with_retry(host, headers, securable_type, full_name, privileges, sp_name)
 
 
 def list_spawned_apps(host: str, oauth_token: str) -> list:
