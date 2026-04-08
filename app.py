@@ -196,7 +196,9 @@ def _setup_git_config():
         f.write("\n".join(lines) + "\n")
     logger.info(f"Git config written to {gitconfig_path}")
 
-    # Configure gh as the git credential helper (if gh is available)
+    # Configure gh as the git credential helper (if gh is available).
+    # NOTE: gh must already be authenticated (via `gh auth login` or GH_TOKEN env var)
+    # for the credential helper to work. Without auth, git operations to GitHub will fail.
     try:
         subprocess.run(
             ["gh", "auth", "setup-git"],
