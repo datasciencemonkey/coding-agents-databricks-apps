@@ -142,12 +142,13 @@
       border-color: rgba(100,150,255,0.25);
       box-shadow: 0 0 8px rgba(100,150,255,0.1);
     }
-    #sessions-btn { position: relative; }
+    #sessions-btn { position: relative; overflow: visible !important; }
     #session-count-badge {
-      position: absolute; top: 2px; right: 2px;
-      background: #e74c3c; color: #fff; font-size: 10px; font-weight: bold;
-      min-width: 16px; height: 16px; line-height: 16px;
-      border-radius: 8px; text-align: center; padding: 0 3px;
+      position: absolute; top: -4px; right: -4px;
+      background: #e74c3c; color: #fff; font-size: 9px; font-weight: bold;
+      min-width: 14px; height: 14px; line-height: 14px;
+      border-radius: 7px; text-align: center; padding: 0 3px;
+      pointer-events: none;
       display: none;
     }
     #toolbar .font-size-row {
