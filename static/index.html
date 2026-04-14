@@ -1275,17 +1275,12 @@
         body: JSON.stringify({ session_id: sessionId })
       });
       const data = await resp.json();
-      // Replay buffered output, then reset terminal state.
-      // The buffer may contain escape sequences captured at different dimensions
-      // or from alternate-screen apps (Claude Code no-flicker, vim), which render
-      // garbled on replay. Clear after replay to guarantee a clean terminal, then
-      // resize to trigger the shell to redraw its prompt.
-      term.write('\x1b[2J\x1b[H');  // clear before replay
-      if (data.output && data.output.length > 0) {
-        data.output.forEach(line => term.write(line));
-      }
-      term.write('\x1b[?1049l');    // exit alternate screen if active
-      term.write('\x1b[2J\x1b[H');  // clear after replay — clean slate
+      // Clear the terminal and send a resize to trigger the running app (bash,
+      // Claude Code, vim) to redraw from scratch. We skip buffer replay because
+      // it contains raw escape sequences from potentially different dimensions or
+      // alternate-screen modes, which produce garbled output. The resize sends
+      // SIGWINCH to the PTY — the app redraws its own UI correctly.
+      term.reset();
       await sendResize(term.cols, term.rows, sessionId);
       return sessionId;
     }
