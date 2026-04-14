@@ -142,14 +142,10 @@
       border-color: rgba(100,150,255,0.25);
       box-shadow: 0 0 8px rgba(100,150,255,0.1);
     }
-    #sessions-btn { position: relative; overflow: visible !important; }
-    #session-count-badge {
-      position: absolute; top: -4px; right: -4px;
-      background: #e74c3c; color: #fff; font-size: 9px; font-weight: bold;
-      min-width: 14px; height: 14px; line-height: 14px;
-      border-radius: 7px; text-align: center; padding: 0 3px;
-      pointer-events: none;
-      display: none;
+    #session-count-label {
+      margin-left: auto; padding: 0 12px;
+      font-size: 11px; color: rgba(255,255,255,0.4);
+      white-space: nowrap; flex-shrink: 0;
     }
     #toolbar .font-size-row {
       display: flex; align-items: center; gap: 4px;
@@ -319,7 +315,7 @@
           <span class="speak-dot" style="display:none;"></span>
           &#x1F3A4;
         </button>
-        <button id="sessions-btn" title="Manage sessions (Ctrl+Shift+S)">&#x2630;<span id="session-count-badge"></span></button>
+        <button id="sessions-btn" title="Manage sessions (Ctrl+Shift+S)">&#x2630;</button>
         <button id="split-btn" title="Split pane (Alt+Shift+D)">&#x229E;</button>
         <button id="close-pane-btn" title="Close pane (Alt+Shift+W)" style="display:none;">&#x2715;</button>
         <button id="next-pane-btn" title="Next pane (Alt+Shift+])" style="display:none;">&#x21C6;</button>
@@ -384,6 +380,7 @@
 
   <div id="tab-bar">
     <button id="new-tab-btn" title="New tab (Ctrl+Shift+T)">+</button>
+    <span id="session-count-label"></span>
   </div>
   <!-- Tab pane containers are created dynamically by createTab() -->
 
@@ -1391,13 +1388,9 @@
       try {
         const resp = await fetch('/api/sessions');
         const active = (await resp.json()).filter(s => !s.exited);
-        const badge = document.getElementById('session-count-badge');
-        if (active.length > 0) {
-          badge.textContent = active.length;
-          badge.style.display = '';
-        } else {
-          badge.style.display = 'none';
-        }
+        const label = document.getElementById('session-count-label');
+        const n = active.length;
+        label.textContent = n === 0 ? 'No active sessions' : n + ' active session' + (n > 1 ? 's' : '');
       } catch (e) { /* ignore */ }
     }
 
