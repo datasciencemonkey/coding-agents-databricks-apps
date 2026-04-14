@@ -391,6 +391,7 @@
   <script src="/static/lib/addon-web-links.js"></script>
   <script src="/static/lib/addon-search.js"></script>
   <script src="/static/lib/addon-image.js"></script>
+  <script src="/static/lib/addon-clipboard.js"></script>
   <script src="/static/lib/socket.io.min.js"></script>
   <script>
     // ── Platform-aware shortcut labels ──────────────────────────────
@@ -1374,6 +1375,9 @@
       const fitAddon = new FitAddon.FitAddon();
       term.loadAddon(fitAddon);
       term.loadAddon(new WebLinksAddon.WebLinksAddon());
+      if (typeof ClipboardAddon !== 'undefined') {
+        term.loadAddon(new ClipboardAddon.ClipboardAddon());
+      }
 
       let searchAddon = null;
       if (typeof SearchAddon !== 'undefined') {
