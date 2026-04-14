@@ -1372,8 +1372,18 @@
           }
         } catch (e) { /* session list failed — just create new */ }
       }
-      const sid = await createSession(label);
-      return { sid, reattached: false };
+      try {
+        const sid = await createSession(label);
+        return { sid, reattached: false };
+      } catch (e) {
+        if (e.message && e.message.includes('Maximum')) {
+          term.write('\r\n\x1b[1;31m  ' + e.message + '\x1b[0m\r\n');
+          term.write('\x1b[90m  Increase MAX_CONCURRENT_SESSIONS in app.yaml or close a session (Ctrl+Shift+S).\x1b[0m\r\n\r\n');
+        } else {
+          term.write('\r\n\x1b[1;31m  Failed to create session: ' + e.message + '\x1b[0m\r\n');
+        }
+        throw e;
+      }
     }
 
     async function updateSessionBadge() {
