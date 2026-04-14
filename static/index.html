@@ -918,10 +918,16 @@
         }
         rafId = null;
       }
-      return function batchWrite(data) {
+      function batchWrite(data) {
         pending += data;
         if (!rafId) { rafId = requestAnimationFrame(flush); }
+      }
+      batchWrite.cancel = function() {
+        clearTimeout(altExitTimer);
+        if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+        pending = '';
       };
+      return batchWrite;
     }
 
     // ── Session / IO (parameterized by sessionId) ──────────────────
@@ -1153,6 +1159,7 @@
     });
 
     function cleanupPane(pane) {
+      if (pane.batchWrite && pane.batchWrite.cancel) pane.batchWrite.cancel();
       pollWorker.postMessage({ type: 'stop_poll', paneId: pane.id });
       if (pane.sessionId) {
         // Leave WebSocket room — session stays alive for reattach
@@ -1341,6 +1348,10 @@
             disposable.dispose();
             term.write('\r\n');
             resolve({ action: 'new' });
+          } else if (data === 'q' || data === 'Q' || data === '\x1b') {
+            disposable.dispose();
+            term.write('\r\n');
+            resolve({ action: 'new' });  // default to new session on cancel
           }
         });
       });
