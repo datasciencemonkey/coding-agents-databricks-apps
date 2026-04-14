@@ -1266,7 +1266,7 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ session_id: s.session_id })
               })
-            )).then(() => createSession().then(sid => resolve({ sid, reattached: false })));
+            )).then(() => { updateSessionBadge(); return createSession().then(sid => resolve({ sid, reattached: false })); });
           } else if (data === 'q' || data === 'Q' || data === '\x1b') {
             disposable.dispose();
             resolve({ sid: null, reattached: false, cancelled: true });
@@ -1988,6 +1988,7 @@
             pollWorker.postMessage({ type: 'start_poll', paneId: pane.id, sessionId: prevSessionId });
           }
         }
+        updateSessionBadge();
         return;
       }
 
