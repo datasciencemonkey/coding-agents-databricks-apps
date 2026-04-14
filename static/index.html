@@ -1166,7 +1166,10 @@
         }
         pane.sessionId = null;
       }
+      // Update immediately, then again after backend finishes cleanup
+      // (terminate_session has a 3s SIGKILL wait before popping the session).
       updateSessionBadge();
+      setTimeout(updateSessionBadge, 4000);
     }
 
     function cleanupAllPanes() {
