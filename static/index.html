@@ -1275,15 +1275,17 @@
         body: JSON.stringify({ session_id: sessionId })
       });
       const data = await resp.json();
-      term.write('\x1b[2J\x1b[H');  // clear
+      // Replay buffered output, then reset terminal state.
+      // The buffer may contain escape sequences captured at different dimensions
+      // or from alternate-screen apps (Claude Code no-flicker, vim), which render
+      // garbled on replay. Clear after replay to guarantee a clean terminal, then
+      // resize to trigger the shell to redraw its prompt.
+      term.write('\x1b[2J\x1b[H');  // clear before replay
       if (data.output && data.output.length > 0) {
         data.output.forEach(line => term.write(line));
       }
-      // Ensure we're on the main screen buffer after replaying output that may
-      // contain alternate-screen sequences (e.g. from Claude Code no-flicker mode).
-      // This is a no-op if already on the main screen.
-      term.write('\x1b[?1049l');
-      // Tell PTY the current terminal size so it redraws correctly
+      term.write('\x1b[?1049l');    // exit alternate screen if active
+      term.write('\x1b[2J\x1b[H');  // clear after replay — clean slate
       await sendResize(term.cols, term.rows, sessionId);
       return sessionId;
     }
