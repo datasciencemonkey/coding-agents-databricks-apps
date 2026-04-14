@@ -901,8 +901,21 @@
     function createWriteBatcher(term) {
       let pending = '';
       let rafId = null;
+      let altExitTimer = null;
       function flush() {
-        if (pending) { term.write(pending); pending = ''; }
+        if (pending) {
+          const data = pending;
+          pending = '';
+          term.write(data);
+          // Detect alternate screen buffer exit (e.g. Claude Code no-flicker, vim).
+          // After exit, the restored main screen has stale content overlapping with
+          // the app's exit output. Clear after a short delay to let exit output
+          // finish, then the shell redraws a clean prompt.
+          if (data.includes('\x1b[?1049l')) {
+            clearTimeout(altExitTimer);
+            altExitTimer = setTimeout(() => term.write('\x1b[2J\x1b[H'), 150);
+          }
+        }
         rafId = null;
       }
       return function batchWrite(data) {
