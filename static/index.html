@@ -1275,13 +1275,16 @@
         body: JSON.stringify({ session_id: sessionId })
       });
       const data = await resp.json();
-      // Clear the terminal and send a resize to trigger the running app (bash,
-      // Claude Code, vim) to redraw from scratch. We skip buffer replay because
-      // it contains raw escape sequences from potentially different dimensions or
-      // alternate-screen modes, which produce garbled output. The resize sends
-      // SIGWINCH to the PTY — the app redraws its own UI correctly.
-      term.reset();
-      await sendResize(term.cols, term.rows, sessionId);
+      // Send a resize to trigger the running app (bash, Claude Code, vim) to
+      // redraw from scratch via SIGWINCH. We skip buffer replay because it
+      // contains raw escape sequences that produce garbled output.
+      // The kernel only sends SIGWINCH when the size actually changes, so we
+      // force a 1-column shrink first, then restore the real size. This
+      // guarantees two SIGWINCH signals even if the terminal size hasn't changed.
+      const cols = term.cols;
+      const rows = term.rows;
+      await sendResize(Math.max(1, cols - 1), rows, sessionId);
+      await sendResize(cols, rows, sessionId);
       return sessionId;
     }
 
