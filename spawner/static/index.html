@@ -77,6 +77,8 @@
     }
     input[type="email"]:focus { border-color: var(--dbx-red); }
     input[type="email"]::placeholder { color: #484F58; }
+    textarea:focus { border-color: var(--dbx-red); }
+    textarea::placeholder { color: #484F58; }
     .field-help { font-size: 12px; color: var(--dbx-text-muted); margin-top: 6px; line-height: 1.4; }
     .field-help strong { color: var(--dbx-text); }
 
@@ -181,6 +183,24 @@
   </div>
 
   <div class="card">
+    <div class="card-header">
+      Bulk Deploy
+      <span class="badge">Paste list</span>
+    </div>
+    <label for="bulk-emails">Email addresses (one per line, comma, or semicolon separated)</label>
+    <textarea id="bulk-emails" rows="6" style="width:100%;padding:10px 14px;font-size:13px;font-family:'SF Mono',SFMono-Regular,Consolas,monospace;background:var(--dbx-dark);border:1px solid var(--dbx-border);border-radius:6px;color:var(--dbx-text);outline:none;resize:vertical;line-height:1.5;" placeholder="user1@example.com&#10;user2@example.com&#10;user3@example.com"></textarea>
+    <p class="field-help">
+      Paste attendee emails from Outlook, Teams, or a spreadsheet. Names and angle brackets are stripped automatically.
+      <strong id="bulk-count"></strong>
+    </p>
+    <button class="btn-primary" id="btn-bulk" onclick="deployBulk()">
+      <svg viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+      Deploy All
+    </button>
+    <div id="bulk-provisions" style="margin-top:20px;display:flex;flex-direction:column;gap:8px;"></div>
+  </div>
+
+  <div class="card">
     <div class="card-header" style="justify-content:space-between;">
       Spawned Apps
       <button id="btn-redeploy-all" onclick="redeployAll()" style="font-size:12px;padding:5px 12px;background:var(--dbx-blue);color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:500;">Redeploy All</button>
@@ -264,8 +284,8 @@ async function deploy() {
   }
 }
 
-function addProvisionCard(appName, email, state, html) {
-  const container = document.getElementById('active-provisions');
+function addProvisionCard(appName, email, state, html, container) {
+  container = container || document.getElementById('active-provisions');
   let card = document.getElementById('prov-' + appName);
   if (!card) {
     card = document.createElement('div');
@@ -287,7 +307,7 @@ function addProvisionCard(appName, email, state, html) {
   return card;
 }
 
-function pollProvisionStatus(appName) {
+function pollProvisionStatus(appName, container) {
   if (activePollers[appName]) clearInterval(activePollers[appName]);
 
   activePollers[appName] = setInterval(async () => {
@@ -304,14 +324,15 @@ function pollProvisionStatus(appName) {
         const url = data.app_url || '';
         addProvisionCard(appName, email, 'success',
           renderStepsHTML(data.steps, true)
-          + (url ? '<a href="' + url + '" style="color:var(--dbx-green);font-weight:600;">&rarr; Open</a>' : ''));
+          + (url ? '<a href="' + url + '" style="color:var(--dbx-green);font-weight:600;">&rarr; Open</a>' : ''),
+          container);
         loadApps();
       } else if (data.status === 'error') {
         clearInterval(activePollers[appName]);
         delete activePollers[appName];
-        addProvisionCard(appName, email, 'error', renderStepsHTML(data.steps, false));
+        addProvisionCard(appName, email, 'error', renderStepsHTML(data.steps, false), container);
       } else {
-        addProvisionCard(appName, email, 'progress', renderStepsHTML(data.steps, false));
+        addProvisionCard(appName, email, 'progress', renderStepsHTML(data.steps, false), container);
       }
     } catch (e) { /* keep polling */ }
   }, 3000);
@@ -478,6 +499,91 @@ function pollRedeployStatus() {
       }
     } catch (e) { /* keep polling */ }
   }, 3000);
+}
+
+// --- Bulk deploy ---
+const bulkTextarea = document.getElementById('bulk-emails');
+const bulkCountEl = document.getElementById('bulk-count');
+
+function parseBulkEmails(raw) {
+  // Split on newlines, commas, or semicolons
+  const parts = raw.split(/[\n,;]+/);
+  const emails = [];
+  for (const part of parts) {
+    let s = part.trim();
+    if (!s) continue;
+    // Strip "Display Name <email>" format from Outlook
+    const match = s.match(/<([^>]+)>/);
+    if (match) s = match[1].trim();
+    // Strip surrounding quotes
+    s = s.replace(/^["']|["']$/g, '').trim();
+    if (s && s.includes('@')) emails.push(s);
+  }
+  // Deduplicate (case-insensitive)
+  const seen = new Set();
+  return emails.filter(e => {
+    const lower = e.toLowerCase();
+    if (seen.has(lower)) return false;
+    seen.add(lower);
+    return true;
+  });
+}
+
+bulkTextarea.addEventListener('input', () => {
+  const emails = parseBulkEmails(bulkTextarea.value);
+  bulkCountEl.textContent = emails.length ? emails.length + ' email' + (emails.length === 1 ? '' : 's') + ' detected' : '';
+});
+
+async function deployBulk() {
+  const emails = parseBulkEmails(bulkTextarea.value);
+  if (emails.length === 0) { alert('No valid email addresses found.'); return; }
+  if (!confirm('Deploy coding agents for ' + emails.length + ' users?')) return;
+
+  const btn = document.getElementById('btn-bulk');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Deploying ' + emails.length + ' apps...';
+
+  try {
+    const resp = await fetch('/api/provision-bulk', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ emails: emails })
+    });
+    const data = await resp.json();
+
+    if (!data.success) {
+      alert('Error: ' + (data.error || 'Unknown error'));
+      resetBulkBtn();
+      return;
+    }
+
+    // Create progress cards and start polling for each
+    const container = document.getElementById('bulk-provisions');
+    for (const r of (data.apps || [])) {
+      if (r.status === 'already_running') {
+        addProvisionCard(r.app_name, r.email, 'success', '&#10003; Already running', container);
+      } else if (r.status === 'already_in_progress') {
+        addProvisionCard(r.app_name, r.email, 'progress', 'Already in progress...', container);
+        pollProvisionStatus(r.app_name, container);
+      } else {
+        addProvisionCard(r.app_name, r.email, 'progress', 'Starting...', container);
+        pollProvisionStatus(r.app_name, container);
+      }
+    }
+
+    resetBulkBtn();
+    loadApps();
+
+  } catch (e) {
+    alert('Request failed: ' + e.message);
+    resetBulkBtn();
+  }
+}
+
+function resetBulkBtn() {
+  const btn = document.getElementById('btn-bulk');
+  btn.disabled = false;
+  btn.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg> Deploy All';
 }
 
 // Auto-refresh apps table every 10s
