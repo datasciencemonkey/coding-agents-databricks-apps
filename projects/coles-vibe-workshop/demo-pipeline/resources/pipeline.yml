@@ -1,0 +1,32 @@
+resources:
+  pipelines:
+    grocery_pipeline:
+      name: grocery-intelligence-${var.team_name}
+      serverless: true
+      catalog: workshop_vibe_coding
+      schema: ${var.schema}
+      development: true
+      libraries:
+        - notebook:
+            path: ../src/bronze/abs_retail_trade.py
+        - notebook:
+            path: ../src/bronze/abs_cpi_food.py
+        - notebook:
+            path: ../src/silver/retail_turnover.py
+        - notebook:
+            path: ../src/silver/food_price_index.py
+        - notebook:
+            path: ../src/gold/retail_summary.py
+        - notebook:
+            path: ../src/gold/food_inflation_yoy.py
+
+  jobs:
+    grocery_daily_refresh:
+      name: grocery-refresh-${var.team_name}
+      tasks:
+        - task_key: run_pipeline
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.grocery_pipeline.id}
+      schedule:
+        quartz_cron_expression: "0 0 6 * * ?"
+        timezone_id: "Australia/Sydney"

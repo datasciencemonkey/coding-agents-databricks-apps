@@ -111,6 +111,7 @@ setup_state = {
         {"id": "gemini",     "label": "Configuring Gemini CLI",       "status": "pending", "started_at": None, "completed_at": None, "error": None},
         {"id": "databricks", "label": "Setting up Databricks CLI",    "status": "pending", "started_at": None, "completed_at": None, "error": None},
         {"id": "mlflow",     "label": "Enabling MLflow tracing",       "status": "pending", "started_at": None, "completed_at": None, "error": None},
+        {"id": "projects",   "label": "Setting up workshop projects",  "status": "pending", "started_at": None, "completed_at": None, "error": None},
     ]
 }
 
@@ -275,6 +276,56 @@ def _setup_git_config():
     _reinit_app_git()
 
 
+def _setup_embedded_projects():
+    """Copy embedded project templates from app source into ~/projects/ and git-init them.
+
+    Projects are bundled under <app_source>/projects/<name>/ at deploy time.
+    Each is copied to ~/projects/<name>/ (if not already present) and initialized
+    as a standalone git repo so commits trigger workspace sync via post-commit hook.
+    """
+    import shutil
+
+    app_dir = os.path.dirname(os.path.abspath(__file__))
+    embedded_dir = os.path.join(app_dir, "projects")
+    if not os.path.isdir(embedded_dir):
+        return
+
+    home = os.environ.get("HOME", "/app/python/source_code")
+    if not home or home == "/":
+        home = "/app/python/source_code"
+    projects_dir = os.path.join(home, "projects")
+    os.makedirs(projects_dir, exist_ok=True)
+
+    for name in os.listdir(embedded_dir):
+        src = os.path.join(embedded_dir, name)
+        if not os.path.isdir(src):
+            continue
+        dest = os.path.join(projects_dir, name)
+        if os.path.exists(dest):
+            logger.info(f"Project already exists, skipping: {dest}")
+            continue
+
+        shutil.copytree(src, dest)
+        # Initialize as a git repo so post-commit hooks work
+        subprocess.run(["git", "init"], cwd=dest, capture_output=True)
+        subprocess.run(["git", "add", "."], cwd=dest, capture_output=True)
+        subprocess.run(
+            ["git", "commit", "-m", "Initial workshop project"],
+            cwd=dest, capture_output=True,
+        )
+        logger.info(f"Embedded project initialized: {dest}")
+
+
+def _run_projects_step():
+    """Run embedded project setup as a tracked setup step."""
+    _update_step("projects", status="running", started_at=time.time())
+    try:
+        _setup_embedded_projects()
+        _update_step("projects", status="complete", completed_at=time.time())
+    except Exception as e:
+        _update_step("projects", status="error", completed_at=time.time(), error=str(e))
+
+
 def _reinit_app_git():
     """On Databricks Apps, reinit git to remove template origin remote."""
     app_dir = os.path.dirname(os.path.abspath(__file__))
@@ -420,11 +471,13 @@ def run_setup():
         ("mlflow",     ["uv", "run", "python", "setup_mlflow.py"]),
     ]
 
-    with ThreadPoolExecutor(max_workers=len(parallel_steps)) as executor:
+    with ThreadPoolExecutor(max_workers=len(parallel_steps) + 1) as executor:
         futures = [
             executor.submit(_run_step, step_id, command)
             for step_id, command in parallel_steps
         ]
+        # Embedded projects (copy + git init) — runs in parallel with agent setup
+        futures.append(executor.submit(_run_projects_step))
         wait(futures)
 
     with setup_lock:

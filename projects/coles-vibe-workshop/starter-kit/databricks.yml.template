@@ -1,0 +1,30 @@
+# Databricks Asset Bundle configuration
+# Replace TEAM_NAME and TEAM_SCHEMA with your team's values
+
+bundle:
+  name: grocery-intelligence-TEAM_NAME
+
+resources:
+  pipelines:
+    grocery_pipeline:
+      name: grocery-intelligence-TEAM_NAME
+      serverless: true
+      catalog: workshop_vibe_coding
+      schema: TEAM_SCHEMA
+      libraries:
+        - notebook:
+            path: src/bronze/abs_retail_trade.py
+        - notebook:
+            path: src/bronze/abs_cpi_food.py
+        - notebook:
+            path: src/silver/retail_turnover.py
+        - notebook:
+            path: src/silver/food_price_index.py
+        - notebook:
+            path: src/gold/retail_summary.py
+        - notebook:
+            path: src/gold/food_inflation.py
+
+targets:
+  dev:
+    default: true

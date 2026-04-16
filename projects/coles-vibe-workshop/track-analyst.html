@@ -1,0 +1,1612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Analyst Track — Coles Vibe Coding Workshop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  /* === THEME VARIABLES (full Databricks/Coles brand set + extended palette) === */
+  :root {
+    /* === DATABRICKS PRIMARY PALETTE (from corporate template) === */
+    --db-lava:       #FF3621;
+    --db-lava-light: #FF5F46;
+    --db-lava-warm:  #FE6046;
+    --db-navy:       #1B3139;
+    --db-ink:        #0B2026;
+    --db-teal:       #1B5162;
+    --db-green:      #00A972;
+    --db-oat:        #F9F7F4;
+    --db-oat-medium: #EEEDE9;
+    --db-oat-dark:   #DBD7CE;
+    --db-white:      #FFFFFF;
+    --db-black:      #000000;
+
+    /* === EXTENDED ACCENT PALETTE (from go/pitchdeck theme) === */
+    --db-burgundy:   #970F29;
+    --db-amber:      #FEAB03;
+    --db-muted-teal: #618693;
+    --db-indigo:     #4259FE;
+
+    /* === CO-BRAND === */
+    --coles-red:     #ED1C24;
+    --coles-red-glow: rgba(237, 28, 36, 0.12);
+
+    /* === TRACK ACCENT === */
+    --track-cyan:    #0891b2;
+    --track-cyan-glow: rgba(8, 145, 178, 0.12);
+
+    /* === DERIVED / FUNCTIONAL COLORS === */
+    --bg-primary:    var(--db-oat);
+    --bg-secondary:  var(--db-white);
+    --bg-dark:       var(--db-navy);
+    --bg-black:      var(--db-black);
+    --text-primary:  var(--db-ink);
+    --text-secondary: #4A5E68;
+    --text-on-dark:  var(--db-white);
+    --accent:        var(--db-lava);
+    --accent-hover:  #E02E1A;
+    --accent-glow:   rgba(255, 54, 33, 0.15);
+    --divider:       var(--db-oat-medium);
+
+    /* === TYPOGRAPHY === */
+    --font-display: 'DM Sans', sans-serif;
+    --font-body:    'DM Sans', sans-serif;
+    --font-mono:    'DM Mono', monospace;
+  }
+
+  /* === BASE RESET === */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: auto; overflow-y: scroll; scroll-snap-type: y mandatory; overflow-x: hidden; }
+  body { font-family: var(--font-body); color: var(--text-primary); background: var(--db-ink); overflow-x: hidden; }
+
+  /* === SLIDE CONTAINER === */
+  .slide {
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    scroll-snap-align: start;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* === PAGE SLIDES — warm oat background === */
+  .page-slide {
+    background: var(--db-oat);
+    padding: 48px 80px 48px 80px;
+  }
+
+  /* === COVER SLIDE — deep branded gradient === */
+  .cover-slide {
+    background: linear-gradient(135deg, var(--db-navy) 0%, var(--db-ink) 60%, #0c2a32 100%);
+    color: white;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+  }
+  .cover-slide::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--db-lava) 0%, var(--db-lava-light) 50%, var(--db-green) 100%);
+  }
+  .cover-slide::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 48px;
+    background: linear-gradient(90deg,
+      var(--db-lava) 0%, var(--db-lava) 25%,
+      var(--coles-red) 25%, var(--coles-red) 50%,
+      var(--db-green) 50%, var(--db-green) 75%,
+      var(--db-teal) 75%, var(--db-teal) 100%);
+    opacity: 0.15;
+  }
+  .cover-slide .cover-decoration {
+    position: absolute;
+    width: 600px; height: 600px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(8,145,178,0.08) 0%, transparent 70%);
+    top: -200px; right: -200px;
+    pointer-events: none;
+  }
+  .cover-slide .cover-decoration-2 {
+    position: absolute;
+    width: 400px; height: 400px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0,169,114,0.06) 0%, transparent 70%);
+    bottom: -150px; left: -100px;
+    pointer-events: none;
+  }
+
+  /* === DIVIDER SLIDES — navy-to-ink gradient === */
+  .divider-slide {
+    background: linear-gradient(135deg, var(--db-navy) 0%, var(--db-ink) 100%);
+    color: white;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+  }
+  .divider-slide::before {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 110%; height: 110%;
+    background: radial-gradient(ellipse at 30% 50%, rgba(27,81,98,0.25) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  /* === ATMOSPHERIC TEXTURES === */
+  .texture-noise::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0.03;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 256px 256px;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .texture-noise > * { position: relative; z-index: 1; }
+
+  .texture-dots::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0.06;
+    background-image: radial-gradient(circle, var(--db-oat-dark) 0.5px, transparent 0.5px);
+    background-size: 20px 20px;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .texture-dots > * { position: relative; z-index: 1; }
+
+  /* === COVER SLIDE TYPOGRAPHY (4K-ready clamp) === */
+  .cover-slide h1 {
+    font-size: clamp(2.5rem, 4.5vw, 7rem);
+    font-weight: 700;
+    margin-bottom: 16px;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+  }
+  .cover-slide h2 {
+    font-size: clamp(1.4rem, 2.4vw, 3.5rem);
+    font-weight: 400;
+    opacity: 0.85;
+    margin-bottom: 12px;
+    line-height: 1.2;
+  }
+  .cover-slide .cover-subtitle {
+    font-size: clamp(1rem, 1.3vw, 2rem);
+    font-weight: 500;
+    color: var(--track-cyan);
+    margin-top: 8px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .cover-slide .cover-badge {
+    display: inline-block;
+    background: var(--track-cyan);
+    color: white;
+    padding: 10px 32px;
+    border-radius: 28px;
+    font-size: clamp(0.9rem, 1.1vw, 1.6rem);
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 32px;
+    box-shadow: 0 4px 20px rgba(8, 145, 178, 0.3);
+  }
+  .cover-slide .cover-logos {
+    margin-top: 32px;
+    font-size: clamp(0.85rem, 1vw, 1.4rem);
+    opacity: 0.6;
+  }
+  /* === DATABRICKS LOGO === */
+  .db-logo-cover { height: 40px; width: auto; margin-bottom: 20px; }
+
+  /* === DIVIDER SLIDE TYPOGRAPHY (4K-ready clamp) === */
+  .divider-slide h1 {
+    font-size: clamp(2.2rem, 4vw, 6rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 12px;
+    line-height: 1.1;
+  }
+  .divider-slide h2 {
+    font-size: clamp(1rem, 1.5vw, 2.2rem);
+    font-weight: 400;
+    opacity: 0.8;
+    margin-bottom: 8px;
+    line-height: 1.3;
+  }
+  .divider-slide .divider-timing {
+    display: inline-block;
+    background: rgba(255,255,255,0.10);
+    border: 1px solid rgba(255,255,255,0.18);
+    color: white;
+    padding: 6px 24px;
+    border-radius: 24px;
+    font-size: clamp(0.85rem, 1vw, 1.4rem);
+    font-weight: 500;
+    margin-top: 20px;
+    letter-spacing: 0.5px;
+  }
+
+  /* === DARK BG HELPERS === */
+  .dark-bg .eyebrow { color: var(--db-lava-light); }
+  .dark-bg .lead { color: rgba(255,255,255,0.7); }
+  .dark-bg .card {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 4px 24px rgba(0,0,0,0.2);
+    color: white;
+  }
+  .dark-bg .card:hover {
+    background: rgba(255,255,255,0.09);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  }
+  .dark-bg .card h3 { color: white; }
+  .dark-bg .card p, .dark-bg .card li { color: rgba(255,255,255,0.7); }
+
+  /* === PAGE HEADER — cyan accent line === */
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 4px solid var(--track-cyan);
+    padding-bottom: 12px;
+    margin-bottom: 24px;
+    flex-shrink: 0;
+  }
+  .page-header h2 {
+    font-size: clamp(1.4rem, 2.2vw, 3rem);
+    font-weight: 700;
+    color: var(--db-navy);
+    letter-spacing: -0.02em;
+  }
+  .page-header h2::before {
+    content: '';
+    display: inline-block;
+    width: 22px;
+    height: 24px;
+    background: url("data:image/svg+xml,%3Csvg viewBox='0 0 105 113' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M98.9 46.6L52.3 72.9L2.4 44.8L0 46.1V66.5L52.3 95.9L98.9 69.7V80.5L52.3 106.8L2.4 78.7L0 80V83.5L52.3 112.9L104.5 83.5V63.1L102.1 61.8L52.3 89.8L5.6 63.6V52.8L52.3 79L104.5 49.6V29.5L101.9 28L52.3 55.9L8 31.1L52.3 6.2L88.7 26.7L91.9 24.9V22.4L52.3 0.1L0 29.5V32.7L52.3 62.1L98.9 35.8V46.6Z' fill='%23FF3621'/%3E%3C/svg%3E") no-repeat center/contain;
+    margin-right: 10px;
+    vertical-align: middle;
+  }
+  .page-header .track-badge {
+    background: var(--track-cyan);
+    color: white;
+    padding: 6px 20px;
+    border-radius: 20px;
+    font-size: clamp(0.85rem, 1vw, 1.4rem);
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    box-shadow: 0 2px 8px rgba(8, 145, 178, 0.25);
+  }
+
+  /* === PAGE CONTENT === */
+  .page-content { flex: 1; overflow: hidden; }
+  .page-content h3 { font-size: clamp(1.1rem, 1.5vw, 2rem); font-weight: 700; color: var(--track-cyan); margin: 16px 0 8px; }
+  .page-content h3:first-child { margin-top: 0; }
+  .page-content h4 { font-size: clamp(0.9rem, 1.1vw, 1.5rem); font-weight: 600; color: var(--db-navy); margin: 12px 0 6px; }
+  .page-content p { font-size: clamp(0.9rem, 1.1vw, 1.5rem); line-height: 1.5; margin-bottom: 8px; color: var(--text-primary); }
+  .page-content ul, .page-content ol { font-size: clamp(0.9rem, 1.1vw, 1.5rem); line-height: 1.5; margin-left: 24px; margin-bottom: 8px; }
+  .page-content li { margin-bottom: 4px; }
+
+  /* === CODE BLOCKS — dark theme, cyan top border === */
+  .code-block {
+    background: var(--db-navy);
+    color: #E0E0E0;
+    border-radius: 12px;
+    border-top: 3px solid var(--track-cyan);
+    padding: 14px 18px;
+    font-family: var(--font-mono);
+    font-size: clamp(0.85rem, 1.05vw, 1.5rem);
+    line-height: 1.45;
+    white-space: pre;
+    overflow-x: auto;
+    margin: 10px 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+  .code-block .keyword { color: #569CD6; }
+  .code-block .string { color: #CE9178; }
+  .code-block .comment { color: #6A9955; }
+  .code-block .function { color: #DCDCAA; }
+  .code-block .type { color: #4EC9B0; }
+  .code-block .decorator { color: #fab387; }
+
+  /* === INLINE CODE === */
+  code {
+    background: var(--db-oat-medium);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+    color: var(--track-cyan);
+  }
+
+  /* === TIP BOX — white card, green left border === */
+  .tip-box {
+    background: var(--db-white);
+    border: 1px solid var(--db-oat-medium);
+    border-left: 4px solid var(--db-green);
+    padding: 12px 16px;
+    border-radius: 12px;
+    margin: 10px 0;
+    font-size: clamp(0.85rem, 1vw, 1.4rem);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  }
+  .tip-box strong { color: var(--db-green); }
+
+  /* === WARNING BOX — white card, orange left border === */
+  .warning-box {
+    background: var(--db-white);
+    border: 1px solid var(--db-oat-medium);
+    border-left: 4px solid #ff9800;
+    padding: 12px 16px;
+    border-radius: 12px;
+    margin: 10px 0;
+    font-size: clamp(0.85rem, 1vw, 1.4rem);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  }
+  .warning-box strong { color: #e65100; }
+
+  /* === PHASE BADGE === */
+  .phase-badge {
+    display: inline-block;
+    background: var(--db-navy);
+    color: white;
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+  }
+
+  /* === TIME BADGE === */
+  .time-badge {
+    display: inline-block;
+    background: var(--db-teal);
+    color: white;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    margin-left: 8px;
+  }
+
+  /* === TWO COLUMN LAYOUT === */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+
+  /* === THREE COLUMN LAYOUT === */
+  .three-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+  }
+
+  /* === TIER CARDS — premium white on oat, colored top border, shadow === */
+  .tier-card {
+    background: var(--db-white);
+    border-radius: 12px;
+    padding: 16px;
+    border: 1px solid var(--db-oat-medium);
+    border-top: 3px solid var(--track-cyan);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .tier-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.10);
+  }
+  .tier-card h4 { color: var(--track-cyan); margin-top: 0; }
+  .tier-card p { font-size: clamp(0.85rem, 1vw, 1.4rem); line-height: 1.45; color: var(--text-primary); }
+  .tier-card ul { font-size: clamp(0.85rem, 1.05vw, 1.5rem); margin-left: 18px; }
+  .tier-card li { margin-bottom: 3px; }
+  .tier-card .tier-label {
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+  }
+
+  /* === SUCCESS BOX — white card, green border === */
+  .success-box {
+    background: var(--db-white);
+    border: 2px solid var(--db-green);
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin: 10px 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  }
+  .success-box h4 { color: var(--db-green); margin-top: 0; }
+
+  /* === PAGE FOOTER — lava top border === */
+  .page-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 2px solid var(--db-lava);
+    padding-top: 8px;
+    margin-top: auto;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+  }
+
+  /* === TABLES — alternating oat rows === */
+  table.info-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: clamp(0.85rem, 1vw, 1.4rem);
+    margin: 10px 0;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  }
+  table.info-table th {
+    background: var(--db-navy);
+    color: var(--db-white);
+    text-align: left;
+    padding: 10px 12px;
+    font-weight: 600;
+    font-size: clamp(0.85rem, 1.05vw, 1.5rem);
+    border-bottom: none;
+  }
+  table.info-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--db-oat-medium);
+    vertical-align: top;
+    background: var(--db-white);
+  }
+  table.info-table tr:nth-child(even) td { background: var(--db-oat); }
+  table.info-table tr:last-child td { border-bottom: none; }
+
+  /* === PROMPT BLOCKS — dark bg, cyan top border === */
+  .prompt-block {
+    background: var(--db-navy);
+    border-top: 3px solid var(--track-cyan);
+    border-radius: 12px;
+    padding: 14px 18px;
+    font-family: var(--font-mono);
+    font-size: clamp(0.85rem, 1.05vw, 1.5rem);
+    line-height: 1.5;
+    margin: 10px 0;
+    white-space: pre-wrap;
+    color: #E0E0E0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    position: relative;
+  }
+  .prompt-block::before {
+    content: 'PASTE INTO CLAUDE CODE';
+    position: absolute;
+    top: -10px; left: 16px;
+    background: var(--track-cyan);
+    color: white;
+    font-size: 0.6rem;
+    font-weight: 700;
+    padding: 2px 10px;
+    border-radius: 4px;
+    letter-spacing: 1px;
+    font-family: var(--font-body);
+  }
+
+  /* === STEP NUMBER === */
+  .step-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--track-cyan);
+    color: white;
+    font-size: clamp(0.85rem, 1.05vw, 1.5rem);
+    font-weight: 700;
+    margin-right: 8px;
+    flex-shrink: 0;
+    box-shadow: 0 2px 6px rgba(8, 145, 178, 0.25);
+  }
+
+  /* === STEP ROW === */
+  .step-row {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 8px;
+  }
+  .step-row p { margin-bottom: 0; }
+
+  /* === ARCHITECTURE BOX — dark navy, cyan top border === */
+  .architecture-box {
+    background: var(--db-navy);
+    color: #E0E0E0;
+    border-radius: 12px;
+    border-top: 3px solid var(--track-cyan);
+    padding: 16px 20px;
+    font-family: var(--font-mono);
+    font-size: 0.88rem;
+    line-height: 1.4;
+    white-space: pre;
+    margin: 10px 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+
+  /* === INSIGHT BOXES — dark navy bg, white text, cyan left border === */
+  .insight-box {
+    background: var(--db-navy);
+    color: var(--db-white);
+    border-left: 4px solid var(--track-cyan);
+    border-radius: 0 12px 12px 0;
+    padding: 12px 16px;
+    margin: 10px 0;
+    font-size: clamp(0.85rem, 1vw, 1.4rem);
+    line-height: 1.5;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+  .insight-box strong { color: var(--track-cyan); }
+
+  /* === CHECKLIST === */
+  .checklist { list-style: none; margin-left: 0; }
+  .checklist li { padding-left: 28px; position: relative; margin-bottom: 6px; }
+  .checklist li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 3px;
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--db-oat-dark);
+    border-radius: 4px;
+  }
+
+  /* === PROGRESS BAR + NAV DOTS === */
+  .progress-bar {
+    position: fixed;
+    top: 0; left: 0;
+    height: 3px;
+    background: var(--accent);
+    z-index: 100;
+    transition: width 0.3s ease;
+  }
+  .nav-dots {
+    position: fixed;
+    right: 1.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 100;
+  }
+  .nav-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--db-oat-medium);
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    padding: 0;
+  }
+  .nav-dot.active {
+    background: var(--accent);
+    transform: scale(1.4);
+  }
+
+  /* === RESPONSIVE === */
+  @media (max-width: 768px) {
+    .nav-dots { display: none; }
+    .slide { padding: 1.5rem; }
+    .two-col, .three-col { grid-template-columns: 1fr; }
+    .page-slide { padding: 24px 20px; }
+  }
+
+  /* === PRINT STYLESHEET === */
+  @media print {
+    html { scroll-snap-type: none; overflow: visible; }
+    .slide {
+      height: auto;
+      min-height: 100vh;
+      scroll-snap-align: none;
+      page-break-after: always;
+      break-after: page;
+      page-break-inside: avoid;
+      break-inside: avoid;
+      overflow: visible;
+      padding: 2rem 2.5rem;
+    }
+    .slide:last-child { page-break-after: auto; }
+    .progress-bar, .nav-dots { display: none !important; }
+    *, *::before, *::after {
+      animation: none !important;
+      transition: none !important;
+    }
+    .slide { opacity: 1 !important; transform: none !important; }
+    .texture-noise::after,
+    .texture-dots::after { display: none; }
+    .cover-slide, .divider-slide {
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+      color-adjust: exact;
+    }
+    .dark-bg .card {
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+      border: 1px solid rgba(255,255,255,0.2);
+      background: rgba(255,255,255,0.1);
+    }
+    img { page-break-inside: avoid; }
+    .card, .tier-card { box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+  }
+</style>
+</head>
+<body>
+
+<div class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+<nav class="nav-dots" aria-label="Slide navigation"></nav>
+
+<!-- ===== SLIDE 1: COVER ===== -->
+<section class="slide cover-slide dark-bg texture-noise" aria-label="Cover">
+  <div style="position:absolute;top:0;left:0;width:100%;height:100%;overflow:hidden;pointer-events:none;">
+    <div style="position:absolute;right:-80px;top:-80px;width:400px;height:400px;border:2px solid rgba(8,145,178,0.08);border-radius:50%;"></div>
+    <div style="position:absolute;right:-40px;top:-40px;width:320px;height:320px;border:2px solid rgba(8,145,178,0.05);border-radius:50%;"></div>
+    <div style="position:absolute;left:-120px;bottom:-120px;width:500px;height:500px;border:2px solid rgba(255,255,255,0.03);border-radius:50%;"></div>
+  </div>
+  <div class="cover-decoration"></div>
+  <div class="cover-decoration-2"></div>
+  <div class="cover-badge">Analyst Track</div>
+  <!-- Databricks wordmark logo — dark background variant -->
+  <svg class="db-logo-cover" viewBox="0 0 713 113" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Databricks">
+  <g clip-path="url(#clip0_on_dark)">
+  <path d="M98.9 46.5996L52.3 72.8996L2.4 44.7996L0 46.0996V66.4996L52.3 95.8996L98.9 69.6996V80.4996L52.3 106.8L2.4 78.6996L0 79.9996V83.4996L52.3 112.9L104.5 83.4996V63.0996L102.1 61.7996L52.3 89.7996L5.6 63.5996V52.7996L52.3 78.9996L104.5 49.5996V29.4996L101.9 27.9996L52.3 55.8996L8 31.0996L52.3 6.19961L88.7 26.6996L91.9 24.8996V22.3996L52.3 0.0996094L0 29.4996V32.6996L52.3 62.0996L98.9 35.7996V46.5996Z" fill="#FF3621"/>
+  <path d="M202.2 96.1994V6.39941H188.4V39.9994C188.4 40.4994 188.1 40.8994 187.6 41.0994C187.1 41.2994 186.6 41.0994 186.3 40.7994C181.6 35.2994 174.3 32.1994 166.3 32.1994C149.2 32.1994 135.8 46.5994 135.8 64.9994C135.8 73.9994 138.9 82.2994 144.6 88.3994C150.3 94.4994 158 97.7994 166.3 97.7994C174.2 97.7994 181.5 94.4994 186.3 88.7994C186.6 88.3994 187.2 88.2994 187.6 88.3994C188.1 88.5994 188.4 88.9994 188.4 89.4994V96.1994H202.2ZM169.3 85.2994C158.3 85.2994 149.7 76.3994 149.7 64.9994C149.7 53.5994 158.3 44.6994 169.3 44.6994C180.3 44.6994 188.9 53.5994 188.9 64.9994C188.9 76.3994 180.3 85.2994 169.3 85.2994Z" fill="white"/>
+  <path d="M276 96.0996V33.6996H262.3V39.9996C262.3 40.4996 262 40.8996 261.5 41.0996C261 41.2996 260.5 41.0996 260.2 40.6996C255.6 35.1996 248.4 32.0996 240.2 32.0996C223.1 32.0996 209.7 46.4996 209.7 64.8996C209.7 83.2996 223.1 97.6996 240.2 97.6996C248.1 97.6996 255.4 94.3996 260.2 88.5996C260.5 88.1996 261.1 88.0996 261.5 88.1996C262 88.3996 262.3 88.7996 262.3 89.2996V96.0996H276ZM243.3 85.2996C232.3 85.2996 223.7 76.3996 223.7 64.9996C223.7 53.5996 232.3 44.6996 243.3 44.6996C254.3 44.6996 262.9 53.5996 262.9 64.9996C262.9 76.3996 254.3 85.2996 243.3 85.2996Z" fill="white"/>
+  <path d="M314.4 97.1994C318.8 97.1994 322.7 96.7994 324.9 96.4994V84.4994C323.1 84.6994 319.9 84.8994 318 84.8994C312.4 84.8994 308.1 83.8994 308.1 71.7994V46.0994C308.1 45.3994 308.6 44.8994 309.3 44.8994H322.8V33.5994H309.3C308.6 33.5994 308.1 33.0994 308.1 32.3994V14.3994H294.3V32.4994C294.3 33.1994 293.8 33.6994 293.1 33.6994H283.5V44.9994H293.1C293.8 44.9994 294.3 45.4994 294.3 46.1994V75.2994C294.3 97.1994 308.9 97.1994 314.4 97.1994Z" fill="white"/>
+  <path d="M393.3 96.1996V33.6996H379.6V39.9996C379.6 40.4996 379.3 40.8996 378.8 41.0996C378.3 41.2996 377.8 41.0996 377.5 40.6996C372.9 35.1996 365.7 32.0996 357.5 32.0996C340.3 32.0996 327 46.4996 327 64.9996C327 83.4996 340.4 97.7996 357.5 97.7996C365.4 97.7996 372.7 94.4996 377.5 88.6996C377.8 88.2996 378.4 88.1996 378.8 88.2996C379.3 88.4996 379.6 88.8996 379.6 89.3996V96.1996H393.3ZM360.6 85.2996C349.6 85.2996 341 76.3996 341 64.9996C341 53.5996 349.6 44.6996 360.6 44.6996C371.6 44.6996 380.2 53.5996 380.2 64.9996C380.2 76.3996 371.6 85.2996 360.6 85.2996Z" fill="white"/>
+  <path d="M418.4 88.7994C418.5 88.7994 418.7 88.6994 418.8 88.6994C419.1 88.6994 419.5 88.8994 419.7 89.0994C424.4 94.5994 431.7 97.6994 439.7 97.6994C456.8 97.6994 470.2 83.2994 470.2 64.8994C470.2 55.8994 467.1 47.5994 461.4 41.4994C455.7 35.3994 448 32.0994 439.7 32.0994C431.8 32.0994 424.5 35.3994 419.7 41.0994C419.4 41.4994 418.9 41.5994 418.4 41.4994C417.9 41.2994 417.6 40.8994 417.6 40.3994V6.39941H403.8V96.1994H417.6V89.8994C417.6 89.3994 417.9 88.9994 418.4 88.7994ZM417 64.9994C417 53.5994 425.6 44.6994 436.6 44.6994C447.6 44.6994 456.2 53.5994 456.2 64.9994C456.2 76.3994 447.6 85.2994 436.6 85.2994C425.6 85.2994 417 76.2994 417 64.9994Z" fill="white"/>
+  <path d="M510.1 46.4994C511.4 46.4994 512.6 46.5994 513.4 46.7994V32.5994C512.9 32.4994 512 32.3994 511.1 32.3994C503.9 32.3994 497.3 36.0994 493.8 41.9994C493.5 42.4994 493 42.6994 492.5 42.4994C492 42.3994 491.6 41.8994 491.6 41.3994V33.6994H477.9V96.2994H491.7V68.6994C491.7 54.9994 498.7 46.4994 510.1 46.4994Z" fill="white"/>
+  <path d="M536.1 33.6992H522.1V96.2992H536.1V33.6992Z" fill="white"/>
+  <path d="M528.9 6.49902C524.2 6.49902 520.4 10.299 520.4 14.999C520.4 19.699 524.2 23.499 528.9 23.499C533.6 23.499 537.4 19.699 537.4 14.999C537.4 10.299 533.6 6.49902 528.9 6.49902Z" fill="white"/>
+  <path d="M577.1 32.0996C557.9 32.0996 544 45.8996 544 64.9996C544 74.2996 547.3 82.5996 553.2 88.5996C559.2 94.5996 567.6 97.8996 577 97.8996C584.8 97.8996 590.8 96.3996 602.2 87.9996L594.3 79.6996C588.7 83.3996 583.5 85.1996 578.4 85.1996C566.8 85.1996 558.1 76.4996 558.1 64.9996C558.1 53.4996 566.8 44.7996 578.4 44.7996C583.9 44.7996 589 46.5996 594.1 50.2996L602.9 41.9996C592.6 33.1996 583.3 32.0996 577.1 32.0996Z" fill="white"/>
+  <path d="M626.5 68.699C626.7 68.499 627 68.399 627.3 68.399H627.4C627.7 68.399 628 68.599 628.3 68.799L650.4 96.199H667.4L638.8 61.599C638.4 61.099 638.4 60.399 638.9 59.999L665.2 33.699H648.3L625.6 56.499C625.3 56.799 624.8 56.899 624.3 56.799C623.9 56.599 623.6 56.199 623.6 55.699V6.49902H609.7V96.299H623.5V71.899C623.5 71.599 623.6 71.199 623.9 70.999L626.5 68.699Z" fill="white"/>
+  <path d="M689.9 97.799C701.2 97.799 712.7 90.899 712.7 77.799C712.7 69.199 707.3 63.299 696.3 59.699L688.8 57.199C683.7 55.499 681.3 53.099 681.3 49.799C681.3 45.999 684.7 43.399 689.5 43.399C694.1 43.399 698.2 46.399 700.8 51.599L711.9 45.599C707.8 37.199 699.3 31.999 689.5 31.999C677.1 31.999 668.1 39.999 668.1 50.899C668.1 59.599 673.3 65.399 684 68.799L691.7 71.299C697.1 72.999 699.4 75.199 699.4 78.699C699.4 83.999 694.5 85.899 690.3 85.899C684.7 85.899 679.7 82.299 677.3 76.399L666 82.399C669.7 91.899 678.8 97.799 689.9 97.799Z" fill="white"/>
+  </g>
+  <defs><clipPath id="clip0_on_dark"><rect width="712.8" height="113" fill="white"/></clipPath></defs>
+  </svg>
+  <h1>Analyst Track</h1>
+  <h2>Coles &times; Databricks Vibe Coding Workshop</h2>
+  <div class="cover-subtitle">Genie Spaces &middot; AI/BI Dashboards &middot; Apps</div>
+  <div class="cover-logos">Coles Group &bull; Databricks &bull; Anthropic</div>
+</section>
+
+<!-- ===== SLIDE 2: GETTING STARTED (1 of 2) ===== -->
+<section class="slide page-slide texture-dots" aria-label="Getting Started — Setup">
+  <div class="page-header">
+    <h2>Getting Started &mdash; Analyst Track Setup</h2>
+    <span class="track-badge">Analyst</span>
+  </div>
+  <div class="page-content">
+    <span class="phase-badge">Post Lab 0</span> <span class="time-badge">5 min</span>
+
+    <div class="tip-box"><strong>You already completed Lab 0</strong> (guided hands-on) with the whole group. You should have a working <code>CLAUDE.md</code>, a passing bronze test, and a verified Databricks connection. If not, ask the facilitator for help before continuing.</div>
+
+    <h3>Step 1: Add Analyst Track Context</h3>
+    <p>Append the Analyst track additions to your existing CLAUDE.md:</p>
+    <div class="code-block"><span class="function">cat</span> ~/starter-kit/CLAUDE-analyst.md >> CLAUDE.md</div>
+
+    <h3>Step 2: Verify Your Environment</h3>
+    <div class="code-block"><span class="comment"># Confirm your bronze test still passes</span>
+uv run pytest tests/ -x --no-header -q
+
+<span class="comment"># Check your Unity Catalog access</span>
+databricks catalogs list | grep workshop</div>
+
+    <div class="warning-box"><strong>If any of these fail,</strong> ask the facilitator for help immediately.</div>
+  </div>
+  <div class="page-footer">
+    <span>Coles &times; Databricks Vibe Coding Workshop</span>
+    <span>Getting Started: Analyst Track</span>
+  </div>
+</section>
+
+<!-- ===== SLIDE 3: GETTING STARTED (2 of 2) ===== -->
+<section class="slide page-slide texture-dots" aria-label="Getting Started — Explore Data">
+  <div class="page-header">
+    <h2>Getting Started &mdash; Explore the Data</h2>
+    <span class="track-badge">Analyst</span>
+  </div>
+  <div class="page-content">
+    <span class="phase-badge">Lab 0</span>
+
+    <h3>Step 4: Explore the Data</h3>
+    <p>All tracks use the same gold tables. Paste this into Claude Code:</p>
+    <div class="prompt-block">Query these tables and show me 5 rows from each:
+- workshop_vibe_coding.checkpoints.retail_summary
+- workshop_vibe_coding.checkpoints.food_inflation_yoy
+
+Tell me: what columns are available, what date range is covered,
+and which states are included.</div>
+
+    <h3>What You're Working With</h3>
+    <div class="two-col">
+      <div>
+        <h4><code>retail_summary</code></h4>
+        <ul>
+          <li><code>state</code> &mdash; Australian state name</li>
+          <li><code>industry</code> &mdash; Retail category</li>
+          <li><code>month</code> &mdash; Monthly observation date</li>
+          <li><code>turnover_millions</code> &mdash; Monthly turnover ($M AUD)</li>
+          <li><code>turnover_3m_avg</code> / <code>turnover_12m_avg</code></li>
+          <li><code>yoy_growth_pct</code> &mdash; Year-over-year growth %</li>
+        </ul>
+      </div>
+      <div>
+        <h4><code>food_inflation_yoy</code></h4>
+        <ul>
+          <li><code>state</code> &mdash; Australian state name</li>
+          <li><code>quarter</code> &mdash; Calendar quarter</li>
+          <li><code>cpi_index</code> &mdash; CPI value (base = 100)</li>
+          <li><code>yoy_change_pct</code> &mdash; YoY CPI change %</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Your Track: Analyst</h3>
+    <p>You will build <strong>natural language interfaces</strong> that let business users query this data without writing code &mdash; Genie spaces, AI/BI dashboards, and a FastAPI web app.</p>
+
+    <div class="tip-box"><strong>Analyst track note:</strong> Most Lab 1 work is in the <strong>Databricks UI</strong>, not the terminal. The terminal is used for adding metadata and writing SQL.</div>
+  </div>
+  <div class="page-footer">
+    <span>Coles &times; Databricks Vibe Coding Workshop</span>
+    <span>Lab 0: Getting Started</span>
+  </div>
+</section>
+
+<!-- ===== SLIDE 4: LAB 1 DIVIDER ===== -->
+<section class="slide divider-slide dark-bg texture-noise" aria-label="Lab 1 Divider">
+  <h2 style="opacity: 0.6; font-size: 1rem; letter-spacing: 2px; text-transform: uppercase;">Lab 1</h2>
+  <h1>Genie &amp; AI/BI Dashboards</h1>
+  <h2>Create natural language interfaces for business users</h2>
+  <div class="divider-timing">12:00 PM / 60 Minutes</div>
+</section>
+
+<!-- ===== SLIDE 5: LAB 1 PHASE 1 — CREATE GENIE SPACE ===== -->
+<section class="slide page-slide texture-dots" aria-label="Lab 1 Phase 1 — Create Genie Space">
+  <div class="page-header">
+    <h2>Phase 1: Create Genie Space + Add Metadata</h2>
+    <span class="track-badge">Analyst</span>
+  </div>
+  <div class="page-content">
+    <span class="phase-badge">Phase 1</span> <span class="time-badge">15 min</span>
+
+    <div class="two-col">
+      <div>
+        <h3>1.1 Create your Genie Space (UI)</h3>
+        <p>In the Databricks workspace UI:</p>
+        <div class="step-row"><span class="step-number">1</span><p>Click <strong>Genie</strong> in the left sidebar</p></div>
+        <div class="step-row"><span class="step-number">2</span><p>Click <strong>New Genie Space</strong></p></div>
+        <div class="step-row"><span class="step-number">3</span><p>Configure:</p></div>
+        <ul>
+          <li><strong>Name:</strong> "Grocery Intelligence &mdash; TEAM_NAME"</li>
+          <li><strong>SQL Warehouse:</strong> Select the workshop warehouse</li>
+          <li><strong>Tables:</strong> Add both gold tables:
+            <br><code>workshop_vibe_coding.TEAM_SCHEMA.retail_summary</code>
+            <br><code>workshop_vibe_coding.TEAM_SCHEMA.food_inflation_yoy</code></li>
+        </ul>
+        <h4>General Instructions (paste into Genie):</h4>
+        <div class="prompt-block">This data contains Australian retail trade and food price data.
+States are Australian states (New South Wales, Victoria, Queensland, etc.).
+Turnover is in millions of AUD.
+CPI index values are relative to a base period.
+YoY growth and change percentages show year-over-year comparisons.</div>
+      </div>
+      <div>
+        <h3>1.2 Add Column Descriptions (Terminal)</h3>
+        <p>Paste this into Claude Code:</p>
+        <div class="prompt-block" style="font-size: 0.88rem;">Add column comments to our gold tables for better Genie and AI/BI accuracy:
+
+For workshop_vibe_coding.TEAM_SCHEMA.retail_summary:
+- Table comment: "Monthly retail turnover summary by Australian
+  state and industry with rolling averages and YoY growth"
+- state: "Australian state name (NSW, VIC, QLD, etc.)"
+- industry: "Retail industry category"
+- month: "Date of the monthly observation"
+- turnover_millions: "Monthly retail turnover in millions AUD"
+- turnover_3m_avg: "3-month rolling average"
+- turnover_12m_avg: "12-month rolling average"
+- yoy_growth_pct: "Year-over-year turnover growth %"
+
+For workshop_vibe_coding.TEAM_SCHEMA.food_inflation_yoy:
+- Table comment: "Quarterly food price inflation by state"
+- state: "Australian state name"
+- quarter: "Calendar quarter"
+- cpi_index: "Consumer Price Index (base = 100)"
+- yoy_change_pct: "YoY CPI change % (positive = inflation)"
+
+Use ALTER TABLE ... SET TBLPROPERTIES for table comments.
+Use ALTER TABLE ... ALTER COLUMN ... COMMENT for columns.</div>
+      </div>
+    </div>
+  </div>
+  <div class="page-footer">
+    <span>Coles &times; Databricks Vibe Coding Workshop</span>
+    <span>Lab 1 &mdash; Phase 1: Genie Space + Metadata</span>
+  </div>
+</section>
+
+<!-- ===== SLIDE 6: LAB 1 PHASE 2 — BUILD AI/BI DASHBOARD ===== -->
+<section class="slide page-slide texture-dots" aria-label="Lab 1 Phase 2 — Build Dashboard">
+  <div class="page-header">
+    <h2>Phase 2: Build AI/BI Dashboard</h2>
+    <span class="track-badge">Analyst</span>
+  </div>
+  <div class="page-content">
+    <span class="phase-badge">Phase 2</span> <span class="time-badge">20 min</span>
+
+    <div class="two-col">
+      <div>
+        <h3>2.1 Create Dashboard (Person A &mdash; UI)</h3>
+        <div class="step-row"><span class="step-number">1</span><p>Navigate to <strong>Dashboards</strong> &rarr; <strong>Create Dashboard</strong> &rarr; <strong>AI/BI Dashboard</strong></p></div>
+        <div class="step-row"><span class="step-number">2</span><p>Connect to your gold tables</p></div>
+        <div class="step-row"><span class="step-number">3</span><p>Use these natural language prompts:</p></div>
+
+        <div class="prompt-block">Show monthly food retail turnover by state as a line chart for the last 2 years</div>
+        <div class="prompt-block">Create a bar chart comparing year-over-year retail growth by state for the latest month</div>
+        <div class="prompt-block">Show a heatmap of food inflation by state and quarter</div>
+        <div class="prompt-block">Display the top 5 states by average monthly turnover as a horizontal bar chart</div>
+        <div class="prompt-block">Show a trend line of national food price inflation over time</div>
+
+        <div class="step-row"><span class="step-number">4</span><p>Arrange into a clean layout. Title: <strong>"Grocery Intelligence Dashboard &mdash; TEAM_NAME"</strong></p></div>
+      </div>
+      <div>
+        <h3>2.2 Test Genie (Person B &mdash; UI)</h3>
+        <p>Try these questions and note which ones Genie gets right:</p>
+        <ul>
+          <li>"Which state had the highest food retail turnover last month?"</li>
+          <li>"Show me the YoY food price inflation trend for Victoria"</li>
+          <li>"Compare retail growth across all states for the last 12 months"</li>
+          <li>"What's the average monthly turnover for department stores in NSW?"</li>
+          <li>"Which industry has the fastest growing turnover nationally?"</li>
+        </ul>
+        <p>If Genie gets a question wrong, <strong>refine the General Instructions</strong>.</p>
+
+        <div class="tip-box"><strong>Tip:</strong> The richer your column descriptions and instructions, the more accurate Genie becomes. This is the single biggest lever for quality.</div>
+
+        <div class="warning-box"><strong>Stuck?</strong> Grab <strong>Checkpoint AN-1B</strong>: dashboard with 3 pre-built visualizations.</div>
+      </div>
+    </div>
+  </div>
+  <div class="page-footer">
+    <span>Coles &times; Databricks Vibe Coding Workshop</span>
+    <span>Lab 1 &mdash; Phase 2: AI/BI Dashboard</span>
+  </div>
+</section>
+
+<!-- ===== SLIDE 7: LAB 1 PHASE 3 — POLISH + TUNING ===== -->
+<section class="slide page-slide texture-dots" aria-label="Lab 1 Phase 3 — Polish + Tuning">
+  <div class="page-header">
+    <h2>Phase 3: Polish + Advanced Tuning</h2>
+    <span class="track-badge">Analyst</span>
+  </div>
+  <div class="page-content">
+    <span class="phase-badge">Phase 3</span> <span class="time-badge">15 min</span>
+
+    <div class="two-col">
+      <div>
+        <h3>3.1 Tune Genie Accuracy</h3>
+        <p>Based on testing, update General Instructions with:</p>
+        <ul>
+          <li><strong>Example questions</strong> and expected SQL patterns</li>
+          <li><strong>Clarifications</strong> for ambiguous terms (e.g. "last month" = most recent month in data)</li>
+          <li><strong>Column mappings</strong> for common questions</li>
+        </ul>
+        <h4>Example instruction additions:</h4>
+        <div class="prompt-block" style="font-size: 0.88rem;">When users ask about "food retail", filter industry = 'Food retailing'.
+When users ask about "last month", use the MAX(month) from the data.
+For state comparisons, include all 8 states/territories.
+Turnover values are already in millions — do not multiply.</div>
+      </div>
+      <div>
+        <h3>3.2 Publish Dashboard</h3>
+        <div class="step-row"><span class="step-number">1</span><p>Click <strong>Publish</strong> on your dashboard</p></div>
+        <div class="step-row"><span class="step-number">2</span><p>Click <strong>Share</strong> &rarr; get the URL for your demo</p></div>
+        <div class="step-row"><span class="step-number">3</span><p>Click <strong>Embed</strong> &rarr; copy iframe code (for Lab 2 app integration)</p></div>
+
+        <div class="tip-box"><strong>Save the embed URL!</strong> You will use it in Lab 2 to embed the dashboard inside your web app.</div>
+
+        <h3>3.3 Document Accuracy</h3>
+        <p>Test Genie with <strong>10 sample questions</strong>. For each, record:</p>
+        <ul>
+          <li>Did Genie answer correctly? (Yes / No / Partial)</li>
+          <li>Did you need to refine instructions?</li>
+          <li>What SQL did Genie generate?</li>
+        </ul>
+        <p>Target: <strong>80%+ accuracy</strong> on straightforward questions.</p>
+      </div>
+    </div>
+  </div>
+  <div class="page-footer">
+    <span>Coles &times; Databricks Vibe Coding Workshop</span>
+    <span>Lab 1 &mdash; Phase 3: Polish + Tuning</span>
+  </div>
+</section>
+
+<!-- ===== SLIDE 8: LAB 1 PHASE 4 — VERIFY ===== -->
+<section class="slide page-slide texture-dots" aria-label="Lab 1 Phase 4 — Verify">
+  <div class="page-header">
+    <h2>Phase 4: Verify + Prepare for Show &amp; Tell</h2>
+    <span class="track-badge">Analyst</span>
+  </div>
+  <div class="page-content">
+    <span class="phase-badge">Phase 4</span> <span class="time-badge">5 min</span>
+
+    <h3>Verification Checklist</h3>
+    <div class="two-col">
+      <div>
+        <ul class="checklist">
+          <li>Genie space created with both gold tables and instructions</li>
+          <li>Gold tables have column descriptions in Unity Catalog</li>
+          <li>AI/BI dashboard has at least 4 visualizations</li>
+          <li>Genie answers 7/10 test questions correctly</li>
+          <li>Dashboard published with clean layout</li>
+          <li>Ready for Show &amp; Tell</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Show &amp; Tell Prep</h3>
+        <p>You have <strong>3 minutes</strong> to present. Cover:</p>
+        <ol>
+          <li>Live Genie demo &mdash; ask it a question</li>
+          <li>Dashboard walkthrough &mdash; key visualizations</li>
+          <li>What improved Genie accuracy the most?</li>
+          <li>Which questions was Genie best/worst at?</li>
+        </ol>
+
+        <h3>Reflection Questions</h3>
+        <ul>
+          <li>How did column descriptions affect Genie accuracy?</li>
+          <li>How does Genie compare to building a custom query interface?</li>
+          <li>What would you do differently with more time?</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="warning-box"><strong>Running out of time?</strong> Grab <strong>Checkpoint AN-1C</strong> for a complete Lab 1 solution.</div>
+  </div>
+  <div class="page-footer">
+    <span>Coles &times; Databricks Vibe Coding Workshop</span>
+    <span>Lab 1 &mdash; Phase 4: Verify</span>
+  </div>
+</section>
+
+<!-- ===== SLIDE 9: LAB 2 DIVIDER ===== -->
+<section class="slide divider-slide dark-bg texture-noise" aria-label="Lab 2 Divider">
+  <h2 style="opacity: 0.6; font-size: 1rem; letter-spacing: 2px; text-transform: uppercase;">Lab 2</h2>
+  <h1>Build Your App</h1>
+  <h2>FastAPI backend &middot; HTML + Tailwind + htmx &middot; AI-powered queries</h2>
+  <div class="divider-timing">2:00 PM / 60 Minutes</div>
+</section>
+
+<!-- ===== SLIDE 10: LAB 2 TIER OVERVIEW ===== -->
+<section class="slide page-slide texture-dots" aria-label="Lab 2 Tier Overview">
+  <div class="page-header">
+    <h2>Lab 2: Pick Your Tier</h2>
+    <span class="track-badge">Analyst</span>
+  </div>
+  <div class="page-content">
+    <p>Choose an ambition level based on your team's pace. All tiers include a <strong>Genie space</strong> and an <strong>AI/BI dashboard</strong>.</p>
+
+    <div class="three-col" style="margin-top: 16px;">
+      <div class="tier-card">
+        <div class="tier-label">Tier 1</div>
+        <h4>Quick &mdash; Embed &amp; Ship</h4>
+        <p style="font-size: 1.05rem; color: #666; margin-bottom: 8px;">~20 minutes</p>
+        <p>FastAPI backend + <strong>embedded AI/BI dashboard via iframe</strong>. Publish your dashboard, drop the embed URL into your app.</p>
+        <ul>
+          <li>Minimal frontend code</li>
+          <li>Polished result fast</li>
+          <li>"Ask AI" text input</li>
+          <li>HTML + Tailwind CSS</li>
+        </ul>
+      </div>
+      <div class="tier-card" style="border-top-color: var(--db-teal);">
+        <div class="tier-label">Tier 2</div>
+        <h4>Medium &mdash; Custom Charts</h4>
+        <p style="font-size: 1.05rem; color: #666; margin-bottom: 8px;">~35 minutes</p>
+        <p>FastAPI + <strong>Recharts</strong> or <strong>Observable Plot</strong>. Query gold tables via API, render interactive visualizations.</p>
+        <ul>
+          <li>Custom chart components</li>
+          <li>Filter bar (state, dates)</li>
+          <li>Metric cards</li>
+          <li>"Ask AI" with results viz</li>
+        </ul>
+      </div>
+      <div class="tier-card" style="border-top-color: var(--db-lava);">
+        <div class="tier-label">Tier 3</div>
+        <h4>Stretch &mdash; Full Platform</h4>
+        <p style="font-size: 1.05rem; color: #666; margin-bottom: 8px;">~60 minutes</p>
+        <p>Full React app with custom viz + <strong>embedded dashboard</strong> + Genie + NL query feature. The whole enchilada.</p>
+        <ul>
+          <li>Tabbed navigation</li>
+          <li>Dashboard + Explorer + AI tabs</li>
+          <li>Sparklines + metric cards</li>
+          <li>Responsive Tailwind layout</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="architecture-box" style="margin-top: 16px; font-size: 0.68rem;">┌───────────────┐     HTTP       ┌──────────────────────┐
+│   Browser     │  (htmx calls)  │   FastAPI Backend     │
+│  (Tailwind    │───────────────▶│   (app.py)            │      ┌──────────┐  ┌──────────────┐
+│   + htmx)     │◀───────────────│  GET /api/metrics     │─────▶│SQL       │  │Foundation    │
+└───────────────┘  HTML / JSON   │  POST /api/ask        │      │Warehouse │  │Model API     │
+                                 │  GET /                │      └──────────┘  └──────────────┘
+                                 └──────────────────────┘</div>
+  </div>
+  <div class="page-footer">
+    <span>Coles &times; Databricks Vibe Coding Workshop</span>
+    <span>Lab 2 &mdash; Tier Overview</span>
+  </div>
+</section>
+
+<!-- ===== SLIDE 11: LAB 2 PHASE 1 — PRD + TESTS ===== -->
+<section class="slide page-slide texture-dots" aria-label="Lab 2 Phase 1 — PRD + Tests">
+  <div class="page-header">
+    <h2>Phase 1: Write PRD + Tests</h2>
+    <span class="track-badge">Analyst</span>
+  </div>
+  <div class="page-content">
+    <span class="phase-badge">Phase 1</span> <span class="time-badge">10 min</span>
+
+    <div class="two-col">
+      <div>
+        <h3>1.1 Write Your App PRD</h3>
+        <p>Paste this into Claude Code:</p>
+        <div class="prompt-block" style="font-size: 0.82rem;">Create a new project called "grocery-app" with this PRD:
+
+## Grocery Intelligence App
+
+### Overview
+A web application that displays retail analytics from our gold tables
+and allows natural language querying of the data.
+
+### User Stories
+1. As a business user, I want to see retail turnover by state in a
+   clean dashboard with filters.
+2. As an analyst, I want to ask questions in plain English like
+   "which state had the highest food retail growth last year?"
+3. As an executive, I want to see food inflation trends at a glance.
+
+### Technical Requirements
+- Backend: FastAPI (Python)
+- Frontend: HTML + Tailwind CSS + htmx (no npm/node required)
+- Data: workshop_vibe_coding.&lt;team_schema&gt;.retail_summary
+  and workshop_vibe_coding.&lt;team_schema&gt;.food_inflation_yoy
+- AI feature: Natural language to SQL using Foundation Model API
+- Deployment: Databricks Apps
+
+### API Endpoints
+- GET /api/metrics?state=X&amp;start_date=Y&amp;end_date=Z
+- POST /api/ask {"question": "which state has highest growth?"}
+- GET /health → {"status": "ok"}
+- GET / (serves the frontend)</div>
+      </div>
+      <div>
+        <h3>1.2 Write API Tests</h3>
+        <p>Paste this into Claude Code:</p>
+        <div class="prompt-block" style="font-size: 0.82rem;">Write pytest tests for the FastAPI backend:
+
+1. test_health: GET /health returns 200 with {"status": "ok"}
+
+2. test_get_metrics:
+   - Returns 200 with valid state and date range
+   - Returns list of records with: state, industry, month,
+     turnover_millions, yoy_growth_pct
+   - Returns 400 for invalid date format
+   - Returns empty list for non-existent state
+
+3. test_ask_question:
+   - Returns 200 with a valid question
+   - Response has: answer (string), sql_query (string)
+   - Returns 400 for empty question
+
+Write ONLY the tests. Do NOT implement yet.
+Use httpx AsyncClient with ASGITransport for testing.</div>
+
+        <h3>1.3 Create Genie Space (Person C &mdash; UI)</h3>
+        <p>If not already done in Lab 1, follow the Genie Space setup from Phase 1 of Lab 1.</p>
+
+        <div class="tip-box"><strong>Team split:</strong> Person A &rarr; PRD prompt, Person B &rarr; test prompt, Person C &rarr; Genie space (UI task).</div>
+      </div>
+    </div>
+  </div>
+  <div class="page-footer">
+    <span>Coles &times; Databricks Vibe Coding Workshop</span>
+    <span>Lab 2 &mdash; Phase 1: PRD + Tests</span>
+  </div>
+</section>
+
+<!-- ===== SLIDE 12: LAB 2 PHASE 2 — BACKEND ===== -->
+<section class="slide page-slide texture-dots" aria-label="Lab 2 Phase 2 — Build Backend">
+  <div class="page-header">
+    <h2>Phase 2: Build Backend + Frontend (1/2)</h2>
+    <span class="track-badge">Analyst</span>
+  </div>
+  <div class="page-content">
+    <span class="phase-badge">Phase 2</span> <span class="time-badge">25 min</span>
+
+    <h3>2.1 Implement the Backend</h3>
+    <p>Paste into Claude Code:</p>
+    <div class="prompt-block" style="font-size: 0.88rem;">Implement the FastAPI backend to pass all tests.
+
+For /api/metrics:
+- Query the retail_summary gold table with optional filters
+- Use databricks-sql-connector with parameterized queries
+- Return results as JSON
+
+For /api/ask:
+- Send the user's question to the Foundation Model API with the table schema as context
+- The LLM generates a SQL query
+- Execute the SQL and return results with the generated query
+
+Connection details from environment variables:
+- DATABRICKS_HOST, DATABRICKS_HTTP_PATH, DATABRICKS_TOKEN
+
+Run tests after implementation.</div>
+
+    <h3>2.3 Wire It Together</h3>
+    <div class="prompt-block" style="font-size: 0.88rem;">Create app.py that:
+1. Serves FastAPI with CORS middleware
+2. Mounts static files from static/ directory
+3. Serves index.html at root
+4. Has proper error handling
+
+Create app.yaml for Databricks Apps:
+  command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+
+Create requirements.txt with all dependencies. Run all tests one final time.</div>
+
+    <div class="warning-box"><strong>Stuck at 25 minutes?</strong> Grab <strong>Checkpoint 2A</strong>: a working app skeleton with health endpoint, database connection, and basic structure.</div>
+  </div>
+  <div class="page-footer">
+    <span>Coles &times; Databricks Vibe Coding Workshop</span>
+    <span>Lab 2 &mdash; Phase 2: Backend</span>
+  </div>
+</section>
+
+<!-- ===== SLIDE 13: LAB 2 PHASE 2 — FRONTEND OPTIONS ===== -->
+<section class="slide page-slide texture-dots" aria-label="Lab 2 Phase 2 — Frontend Options">
+  <div class="page-header">
+    <h2>Phase 2: Build Backend + Frontend (2/2)</h2>
+    <span class="track-badge">Analyst</span>
+  </div>
+  <div class="page-content">
+    <h3>2.2 Build the Frontend &mdash; Choose Your Approach</h3>
+
+    <div class="three-col">
+      <div class="tier-card">
+        <h4>Tier 1: Embedded Dashboard</h4>
+        <div class="prompt-block" style="font-size: 0.68rem; margin-top: 8px;">Build a frontend in static/index.html with:
+
+1. Header: "Grocery Intelligence Platform"
+   with your team name
+2. An iframe embedding our published AI/BI
+   dashboard (I'll give you the URL)
+3. "Ask AI" section: text input + response area
+4. Use Tailwind CSS from CDN
+5. Clean, professional styling
+   (dark header, white cards)</div>
+      </div>
+      <div class="tier-card" style="border-top-color: var(--db-teal);">
+        <h4>Tier 2: Custom Charts</h4>
+        <div class="prompt-block" style="font-size: 0.68rem; margin-top: 8px;">Build a React frontend with:
+
+1. Header: "Grocery Intelligence Platform"
+2. Filter bar: state dropdown, date pickers
+3. Recharts line chart: monthly turnover
+4. Recharts bar chart: YoY growth by state
+5. Metric cards: Total Turnover, Avg Growth
+6. "Ask AI" section
+7. Tailwind CSS styling
+8. Fetch from FastAPI endpoints</div>
+      </div>
+      <div class="tier-card" style="border-top-color: var(--db-lava);">
+        <h4>Tier 3: Full Platform</h4>
+        <div class="prompt-block" style="font-size: 0.68rem; margin-top: 8px;">Build a React frontend with:
+
+1. Header + navigation tabs
+2. Dashboard tab: charts + embedded
+   AI/BI iframe
+3. Explorer tab: filter bar + sortable
+   data table
+4. Ask AI tab: NL query + SQL display
+5. Metric cards with sparklines
+6. Responsive Tailwind CSS layout</div>
+      </div>
+    </div>
+
+    <h3>2.4 Create AI/BI Dashboard (Person C &mdash; UI)</h3>
+    <p>Navigate to <strong>Dashboards</strong> &rarr; <strong>Create Dashboard</strong> &rarr; <strong>AI/BI Dashboard</strong>. Connect to gold tables. Use the NL prompts from Lab 1 Phase 2.</p>
+
+    <div class="tip-box"><strong>Observable Plot alternative:</strong> Use <code>&lt;script src="https://cdn.jsdelivr.net/npm/@observablehq/plot"&gt;</code> for D3-based charts without React.</div>
+  </div>
+  <div class="page-footer">
+    <span>Coles &times; Databricks Vibe Coding Workshop</span>
+    <span>Lab 2 &mdash; Phase 2: Frontend Options</span>
+  </div>
+</section>
+
+<!-- ===== SLIDE 14: LAB 2 PHASE 3 — WIRE + POLISH ===== -->
+<section class="slide page-slide texture-dots" aria-label="Lab 2 Phase 3 — Wire + Polish">
+  <div class="page-header">
+    <h2>Phase 3: Wire + Polish</h2>
+    <span class="track-badge">Analyst</span>
+  </div>
+  <div class="page-content">
+    <span class="phase-badge">Phase 3</span> <span class="time-badge">15 min</span>
+
+    <div class="two-col">
+      <div>
+        <h3>3.1 Deploy Your App</h3>
+        <div class="code-block">databricks apps deploy \
+  --name grocery-app-<span class="type">&lt;team_name&gt;</span> \
+  --source-code-path ./</div>
+
+        <h3>3.2 Embed the Dashboard</h3>
+        <p>Get the embed URL from Person C, then add to your HTML:</p>
+        <div class="code-block"><span class="keyword">&lt;div</span> <span class="type">style</span>=<span class="string">"width:100%;height:600px;"</span><span class="keyword">&gt;</span>
+  <span class="keyword">&lt;iframe</span>
+    <span class="type">src</span>=<span class="string">"YOUR_EMBED_URL_HERE"</span>
+    <span class="type">width</span>=<span class="string">"100%"</span>
+    <span class="type">height</span>=<span class="string">"100%"</span>
+    <span class="type">frameborder</span>=<span class="string">"0"</span>
+  <span class="keyword">&gt;&lt;/iframe&gt;</span>
+<span class="keyword">&lt;/div&gt;</span></div>
+
+        <div class="warning-box"><strong>Note:</strong> Embedded dashboards display in light mode only. Users need Databricks credentials to view.</div>
+      </div>
+      <div>
+        <h3>3.3 Test Genie Space</h3>
+        <p>Test with these questions:</p>
+        <div class="prompt-block" style="font-size: 0.88rem;">Which state had the highest food retail turnover last month?</div>
+        <div class="prompt-block" style="font-size: 0.88rem;">Show me the YoY food price inflation trend for Victoria.</div>
+        <div class="prompt-block" style="font-size: 0.88rem;">Compare retail growth across all states for the last 12 months.</div>
+
+        <div class="tip-box"><strong>Tip:</strong> If Genie generates incorrect SQL, add table descriptions and column comments in Unity Catalog. The richer the metadata, the better Genie performs.</div>
+
+        <h3>3.4 Verify Everything Works</h3>
+        <ul class="checklist">
+          <li>App loads in browser with dashboard</li>
+          <li>Filters work (state, date range)</li>
+          <li>"Ask AI" returns meaningful answers</li>
+          <li>Genie space answers NL questions</li>
+          <li>AI/BI dashboard shows visualizations</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="page-footer">
+    <span>Coles &times; Databricks Vibe Coding Workshop</span>
+    <span>Lab 2 &mdash; Phase 3: Wire + Polish</span>
+  </div>
+</section>
+
+<!-- ===== SLIDE 15: LAB 2 PHASE 4 — DEMO PREP ===== -->
+<section class="slide page-slide texture-dots" aria-label="Lab 2 Phase 4 — Demo Prep">
+  <div class="page-header">
+    <h2>Phase 4: Demo Prep</h2>
+    <span class="track-badge">Analyst</span>
+  </div>
+  <div class="page-content">
+    <span class="phase-badge">Phase 4</span> <span class="time-badge">5 min</span>
+
+    <h3>Your 3-Minute Demo</h3>
+    <p>Prepare a demo script covering these points:</p>
+
+    <div class="two-col">
+      <div>
+        <div class="step-row"><span class="step-number">1</span><p><strong>Your pipeline</strong> &mdash; quick: show the DAG or table list</p></div>
+        <div class="step-row"><span class="step-number">2</span><p><strong>Your app</strong> &mdash; show it running, use the AI "Ask" feature live</p></div>
+        <div class="step-row"><span class="step-number">3</span><p><strong>Your Genie space</strong> &mdash; ask it a question live</p></div>
+        <div class="step-row"><span class="step-number">4</span><p><strong>Your dashboard</strong> &mdash; show the key visualizations</p></div>
+        <div class="step-row"><span class="step-number">5</span><p><strong>One thing that surprised you</strong></p></div>
+
+        <div class="tip-box"><strong>Pro tip:</strong> Decide who presents what. Split across team members so everyone gets a moment.</div>
+      </div>
+      <div>
+        <h3>Reflection Questions</h3>
+        <ol>
+          <li>How did the PRD guide the agent's decisions?</li>
+          <li>How does Genie compare to your custom AI query feature?</li>
+          <li>What would you need to add to make this production-ready?</li>
+          <li>Which approach (app vs. Genie vs. AI/BI dashboard) is most useful for your team?</li>
+        </ol>
+
+        <div class="warning-box"><strong>Stuck?</strong> Grab <strong>Checkpoint 2D</strong> for a complete solution for reference.</div>
+
+        <h3>Bonus Challenges (if time permits)</h3>
+        <ul>
+          <li>Add Chart.js charts to your app</li>
+          <li>Build an MCP server wrapping your API</li>
+          <li>Create a <code>/deploy</code> skill for validate + deploy</li>
+          <li>Add another team's gold tables to Genie</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="page-footer">
+    <span>Coles &times; Databricks Vibe Coding Workshop</span>
+    <span>Lab 2 &mdash; Phase 4: Demo Prep</span>
+  </div>
+</section>
+
+<!-- ===== SLIDE 16: CHEATSHEET — COMMON PROBLEMS ===== -->
+<section class="slide page-slide texture-dots" aria-label="Cheatsheet — Common Problems">
+  <div class="page-header">
+    <h2>Cheatsheet: Analyst Track Troubleshooting</h2>
+    <span class="track-badge">Analyst</span>
+  </div>
+  <div class="page-content">
+    <div class="two-col">
+      <div>
+        <h3>Genie &amp; Dashboard Issues</h3>
+        <table class="info-table">
+          <tr><th>Problem</th><th>Fix</th></tr>
+          <tr><td>Can't find Genie in sidebar</td><td>Ask facilitator &mdash; may need to be enabled for your workspace</td></tr>
+          <tr><td>Genie permission error</td><td>Need <code>CREATE GENIE SPACE</code> permission on the catalog</td></tr>
+          <tr><td>Genie gives wrong SQL</td><td>Add column descriptions + example queries to General Instructions</td></tr>
+          <tr><td>Dashboard viz doesn't match</td><td>Rephrase the NL prompt or write SQL directly</td></tr>
+          <tr><td>Column comments not showing</td><td>Use <code>ALTER TABLE t ALTER COLUMN c COMMENT 'desc'</code></td></tr>
+          <tr><td>Dashboard slow</td><td>Check SQL warehouse is running (Compute &rarr; SQL Warehouses)</td></tr>
+          <tr><td>Embedded dashboard blank</td><td>Users need Databricks credentials to view</td></tr>
+        </table>
+      </div>
+      <div>
+        <h3>App &amp; API Issues</h3>
+        <table class="info-table">
+          <tr><th>Problem</th><th>Fix</th></tr>
+          <tr><td>CORS errors</td><td>Add <code>CORSMiddleware</code> with <code>allow_origins=["*"]</code></td></tr>
+          <tr><td>htmx not loading</td><td>Add to <code>&lt;head&gt;</code>: <code>&lt;script src="https://unpkg.com/htmx.org@2.0.4"&gt;</code></td></tr>
+          <tr><td>AI generates invalid SQL</td><td>Add full table schema + column descriptions to LLM system prompt</td></tr>
+          <tr><td>App deploys, blank page</td><td>Check static files mounted: <code>app.mount("/static", ...)</code></td></tr>
+          <tr><td>databricks-sql-connector errors</td><td>Check <code>requirements.txt</code> and env vars</td></tr>
+          <tr><td>Running out of time</td><td>Prioritize: working app &gt; Genie &gt; dashboard. Grab checkpoints!</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="page-footer">
+    <span>Coles &times; Databricks Vibe Coding Workshop</span>
+    <span>Cheatsheet: Troubleshooting</span>
+  </div>
+</section>
+
+<!-- ===== SLIDE 17: CHEATSHEET — USEFUL PROMPTS & COMMANDS ===== -->
+<section class="slide page-slide texture-dots" aria-label="Cheatsheet — Prompts & Commands">
+  <div class="page-header">
+    <h2>Cheatsheet: Useful Prompts &amp; Commands</h2>
+    <span class="track-badge">Analyst</span>
+  </div>
+  <div class="page-content">
+    <div class="two-col">
+      <div>
+        <h3>Steering the Agent</h3>
+        <table class="info-table">
+          <tr><th>When the agent...</th><th>Say this</th></tr>
+          <tr><td>Writes too much code</td><td>"Keep it simple. One function, minimal code."</td></tr>
+          <tr><td>Ignores your CLAUDE.md</td><td>"Read CLAUDE.md first, then try again."</td></tr>
+          <tr><td>Gets stuck in a loop</td><td>"Stop. Let's try a different approach."</td></tr>
+          <tr><td>Makes it overly complex</td><td>"Simplify. I just need [specific thing]."</td></tr>
+          <tr><td>Writes code before tests</td><td>"Stop. Write the tests first, then implement."</td></tr>
+          <tr><td>Rewrites working code</td><td>"Don't change functions that pass tests."</td></tr>
+        </table>
+
+        <h3>Useful Commands</h3>
+        <div class="code-block" style="font-size: 0.88rem;"><span class="comment"># Check your Databricks connection</span>
+databricks auth status
+
+<span class="comment"># Run app tests</span>
+pytest tests/test_app.py -x
+
+<span class="comment"># Start app locally for testing</span>
+<span class="function">cd</span> app && uvicorn app:app --reload --port 8000
+
+<span class="comment"># Deploy app</span>
+databricks apps deploy \
+  --name grocery-app-TEAM_NAME \
+  --source-code-path ./</div>
+      </div>
+      <div>
+        <h3>Checkpoint Recovery</h3>
+        <p>If you are stuck and need to catch up:</p>
+        <div class="code-block" style="font-size: 0.88rem;"><span class="comment">-- Ensure gold tables exist in your schema</span>
+<span class="keyword">CREATE TABLE</span> workshop_vibe_coding.TEAM_SCHEMA
+  .retail_summary
+  <span class="keyword">AS SELECT</span> * <span class="keyword">FROM</span>
+  workshop_vibe_coding.checkpoints.retail_summary;
+
+<span class="keyword">CREATE TABLE</span> workshop_vibe_coding.TEAM_SCHEMA
+  .food_inflation_yoy
+  <span class="keyword">AS SELECT</span> * <span class="keyword">FROM</span>
+  workshop_vibe_coding.checkpoints
+  .food_inflation_yoy;</div>
+
+        <h3>MCP &amp; Skills</h3>
+        <p>Speed up common tasks:</p>
+        <div class="code-block" style="font-size: 0.88rem;"><span class="comment"># Commit with a good message</span>
+/commit
+
+<span class="comment"># Run and fix failing tests</span>
+/test
+
+<span class="comment"># Search Databricks docs</span>
+Search the Databricks docs <span class="keyword">for</span> how to
+create a Genie space programmatically.</div>
+      </div>
+    </div>
+  </div>
+  <div class="page-footer">
+    <span>Coles &times; Databricks Vibe Coding Workshop</span>
+    <span>Cheatsheet: Prompts &amp; Commands</span>
+  </div>
+</section>
+
+<!-- ===== SLIDE 18: SUCCESS CRITERIA ===== -->
+<section class="slide page-slide texture-dots" aria-label="Success Criteria">
+  <div class="page-header">
+    <h2>Success Criteria</h2>
+    <span class="track-badge">Analyst</span>
+  </div>
+  <div class="page-content">
+    <div class="two-col">
+      <div>
+        <div class="success-box">
+          <h4>Lab 1: Genie &amp; AI/BI Dashboards</h4>
+          <ul class="checklist">
+            <li>Genie space created with both gold tables and instructions</li>
+            <li>Gold tables have column descriptions in Unity Catalog</li>
+            <li>AI/BI dashboard has at least 4 visualizations</li>
+            <li>Genie answers 7/10 test questions correctly</li>
+            <li>Dashboard published with clean layout</li>
+            <li>Ready for Show &amp; Tell</li>
+          </ul>
+        </div>
+      </div>
+      <div>
+        <div class="success-box">
+          <h4>Lab 2: Build Your App</h4>
+          <ul class="checklist">
+            <li>FastAPI backend with tested endpoints</li>
+            <li>HTML frontend with Tailwind + htmx</li>
+            <li>AI-powered natural language query feature</li>
+            <li>Genie space created and answering questions</li>
+            <li>AI/BI dashboard with at least 3 visualizations</li>
+            <li>App deployed to Databricks Apps</li>
+            <li>All tests passing</li>
+            <li>Ready for 3-minute demo!</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div style="text-align: center; margin-top: 24px;">
+      <div class="tip-box" style="display: inline-block; text-align: left; max-width: 700px;">
+        <strong>Remember:</strong> A working demo is better than a perfect app that is not done. Use checkpoints if you are running behind. The goal is to experience building with AI coding agents, not to finish every feature.
+      </div>
+    </div>
+  </div>
+  <div class="page-footer">
+    <span>Coles &times; Databricks Vibe Coding Workshop</span>
+    <span>Success Criteria</span>
+  </div>
+</section>
+
+<script>
+  class SlidePresentation {
+    constructor() {
+      this.slides = document.querySelectorAll('.slide');
+      this.progressBar = document.querySelector('.progress-bar');
+      this.navDots = document.querySelector('.nav-dots');
+      this.currentSlide = 0;
+      this.init();
+    }
+    init() {
+      this.createNavDots();
+      this.setupIntersectionObserver();
+      this.setupKeyboardNav();
+      this.setupTouchNav();
+      this.setupWheelNav();
+      this.updateProgress();
+    }
+    createNavDots() {
+      this.slides.forEach((_, i) => {
+        const dot = document.createElement('button');
+        dot.className = 'nav-dot' + (i === 0 ? ' active' : '');
+        dot.setAttribute('aria-label', `Go to slide ${i + 1}`);
+        dot.addEventListener('click', () => this.goToSlide(i));
+        this.navDots.appendChild(dot);
+      });
+    }
+    setupIntersectionObserver() {
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+            const index = [...this.slides].indexOf(entry.target);
+            this.currentSlide = index;
+            this.updateDots();
+            this.updateProgress();
+          }
+        });
+      }, { threshold: 0.5 });
+      this.slides.forEach(slide => observer.observe(slide));
+    }
+    setupKeyboardNav() {
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowDown' || e.key === 'ArrowRight' || e.key === ' ') {
+          e.preventDefault();
+          this.goToSlide(this.currentSlide + 1);
+        } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+          e.preventDefault();
+          this.goToSlide(this.currentSlide - 1);
+        }
+      });
+    }
+    setupTouchNav() {
+      let startY = 0;
+      document.addEventListener('touchstart', (e) => {
+        startY = e.touches[0].clientY;
+      }, { passive: true });
+      document.addEventListener('touchend', (e) => {
+        const diff = startY - e.changedTouches[0].clientY;
+        if (Math.abs(diff) > 50) {
+          this.goToSlide(this.currentSlide + (diff > 0 ? 1 : -1));
+        }
+      }, { passive: true });
+    }
+    setupWheelNav() {
+      let lastScroll = 0;
+      document.addEventListener('wheel', (e) => {
+        const now = Date.now();
+        if (now - lastScroll < 800) return;
+        lastScroll = now;
+        this.goToSlide(this.currentSlide + (e.deltaY > 0 ? 1 : -1));
+      }, { passive: true });
+    }
+    goToSlide(index) {
+      const target = Math.max(0, Math.min(index, this.slides.length - 1));
+      this.slides[target].scrollIntoView({ behavior: 'instant' });
+    }
+    updateDots() {
+      this.navDots.querySelectorAll('.nav-dot').forEach((dot, i) => {
+        dot.classList.toggle('active', i === this.currentSlide);
+      });
+    }
+    updateProgress() {
+      const pct = ((this.currentSlide + 1) / this.slides.length) * 100;
+      this.progressBar.style.width = pct + '%';
+      this.progressBar.setAttribute('aria-valuenow', Math.round(pct));
+    }
+  }
+  new SlidePresentation();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,20 @@
+bundle:
+  name: grocery-intelligence-reference
+
+variables:
+  team_name:
+    default: reference
+    description: Team name used for resource naming
+  schema:
+    default: reference
+    description: Target schema within the workshop catalog
+
+include:
+  - resources/*.yml
+
+targets:
+  dev:
+    default: true
+    variables:
+      team_name: reference
+      schema: reference

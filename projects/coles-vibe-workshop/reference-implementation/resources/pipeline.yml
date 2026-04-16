@@ -1,0 +1,44 @@
+resources:
+  pipelines:
+    grocery_pipeline:
+      name: grocery-intelligence-${var.team_name}
+      description: >
+        Lakeflow Declarative Pipeline for the Grocery Intelligence Platform.
+        Ingests ABS retail trade, ABS CPI, and FSANZ food recalls through
+        bronze -> silver -> gold medallion architecture.
+      serverless: true
+      catalog: workshop_vibe_coding
+      schema: ${var.schema}
+      development: true
+      libraries:
+        - notebook:
+            path: ../src/bronze/abs_retail_trade.py
+        - notebook:
+            path: ../src/bronze/abs_cpi_food.py
+        - notebook:
+            path: ../src/bronze/fsanz_food_recalls.py
+        - notebook:
+            path: ../src/silver/retail_turnover.py
+        - notebook:
+            path: ../src/silver/food_price_index.py
+        - notebook:
+            path: ../src/silver/food_recalls.py
+        - notebook:
+            path: ../src/gold/retail_summary.py
+        - notebook:
+            path: ../src/gold/food_inflation.py
+        - notebook:
+            path: ../src/gold/grocery_insights.py
+
+  jobs:
+    grocery_daily_refresh:
+      name: grocery-daily-refresh-${var.team_name}
+      description: Daily refresh of the Grocery Intelligence Pipeline
+      trigger:
+        cron:
+          quartz_cron_expression: "0 0 6 * * ?"
+          timezone_id: "Australia/Sydney"
+      tasks:
+        - task_key: run_pipeline
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.grocery_pipeline.id}
