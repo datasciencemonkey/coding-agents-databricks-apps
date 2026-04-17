@@ -1,0 +1,7 @@
+# Shared dependencies for all workshop tracks
+pytest>=8.0
+pytest-asyncio>=1.0
+behave>=1.2
+ruff>=0.15
+databricks-sdk>=0.102
+databricks-sql-connector>=3.4

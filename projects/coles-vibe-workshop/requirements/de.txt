@@ -1,0 +1,14 @@
+# Data Engineering track
+-r shared.txt
+
+pyspark>=4.1
+delta-spark>=4.1
+beautifulsoup4>=4.12
+lxml>=5.0
+httpx>=0.28
+fastapi>=0.100
+uvicorn[standard]>=0.20
+
+# NOTE: databricks-declarative-pipelines is only available on Databricks
+# cluster runtime, not on public PyPI. The @dp.table / @dp.expect decorators
+# will work when your pipeline runs on a Databricks cluster.

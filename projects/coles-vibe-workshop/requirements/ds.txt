@@ -1,0 +1,7 @@
+# Data Science track
+-r shared.txt
+
+pyspark>=4.1
+mlflow>=3.11
+scikit-learn>=1.8
+xgboost>=3.2
