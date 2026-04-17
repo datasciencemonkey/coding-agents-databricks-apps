@@ -17,33 +17,19 @@ home = Path(os.environ["HOME"])
 claude_dir = home / ".claude"
 claude_dir.mkdir(exist_ok=True)
 
-# Install hook scripts into ~/.claude/scripts/ (used by settings.json hooks below).
-# Must run BEFORE settings.json is written so the referenced scripts exist.
-scripts_src = Path(__file__).parent / "claude-hooks"
-scripts_dst = claude_dir / "scripts"
-scripts_dst.mkdir(exist_ok=True)
-if scripts_src.exists():
-    installed_hooks = []
-    for hook_file in scripts_src.iterdir():
-        if hook_file.is_file():
-            dst = scripts_dst / hook_file.name
-            shutil.copy2(str(hook_file), str(dst))
-            os.chmod(dst, 0o755)
-            installed_hooks.append(hook_file.name)
-    if installed_hooks:
-        print(f"Claude hooks installed: {', '.join(installed_hooks)}")
-
-# Install slash commands (e.g., /til) into ~/.claude/commands/.
-commands_src = Path(__file__).parent / "claude-commands"
-commands_dst = claude_dir / "commands"
-commands_dst.mkdir(exist_ok=True)
-if commands_src.exists():
-    installed_commands = []
-    for cmd_file in commands_src.glob("*.md"):
-        shutil.copy2(str(cmd_file), str(commands_dst / cmd_file.name))
-        installed_commands.append(cmd_file.name)
-    if installed_commands:
-        print(f"Claude slash commands installed: {', '.join(installed_commands)}")
+# The coda-marketplace bundled with the CODA source is registered via
+# extraKnownMarketplaces in settings.json below. Claude Code auto-discovers
+# agents/ and commands/ inside enabled plugins, so we only need to:
+#   1. ensure hook scripts are executable (git doesn't preserve +x reliably)
+#   2. know the hooks/ path so we can wire hooks into settings.json
+marketplace_dir = Path(__file__).parent / "coda-marketplace"
+plugin_dir = marketplace_dir / "plugins" / "coda-essentials"
+hooks_dir = plugin_dir / "hooks"
+if hooks_dir.exists():
+    for hook in hooks_dir.iterdir():
+        if hook.is_file():
+            os.chmod(hook, 0o755)
+    print(f"coda-essentials hooks ready: {hooks_dir}")
 
 # 1. Write settings.json for Databricks model serving (requires DATABRICKS_TOKEN)
 token = os.environ.get("DATABRICKS_TOKEN", "").strip()
@@ -61,6 +47,17 @@ if token:
     settings = {
         "theme": "dark",
         "outputStyle": "Explanatory",
+        "extraKnownMarketplaces": {
+            "coda": {
+                "source": {
+                    "source": "directory",
+                    "path": str(marketplace_dir),
+                },
+            },
+        },
+        "enabledPlugins": {
+            "coda-essentials@coda": True,
+        },
         "permissions": {
             "defaultMode": "auto",
             "allow": [
@@ -127,10 +124,10 @@ if token:
                 "matcher": "",
                 "hooks": [
                     {"type": "command",
-                     "command": f"python3 {scripts_dst}/check-memory-staleness.py --cwd \"$PWD\"",
+                     "command": f"python3 {hooks_dir}/check-memory-staleness.py --cwd \"$PWD\"",
                      "timeout": 10},
                     {"type": "command",
-                     "command": f"bash {scripts_dst}/session-context-loader.sh",
+                     "command": f"bash {hooks_dir}/session-context-loader.sh",
                      "timeout": 15},
                 ],
             }],
@@ -138,7 +135,7 @@ if token:
                 "matcher": "Edit|Write",
                 "hooks": [{
                     "type": "command",
-                    "command": f"bash {scripts_dst}/memory-stamp-verified.sh",
+                    "command": f"bash {hooks_dir}/memory-stamp-verified.sh",
                     "timeout": 5,
                 }],
             }],
@@ -146,10 +143,10 @@ if token:
                 "matcher": "",
                 "hooks": [
                     {"type": "command",
-                     "command": f"bash {scripts_dst}/session-crystallize-nudge.sh",
+                     "command": f"bash {hooks_dir}/session-crystallize-nudge.sh",
                      "timeout": 10},
                     {"type": "command",
-                     "command": f"bash {scripts_dst}/push-brain-to-workspace.sh",
+                     "command": f"bash {hooks_dir}/push-brain-to-workspace.sh",
                      "timeout": 5},
                 ],
             }],
@@ -209,21 +206,8 @@ if result.returncode == 0:
 else:
     print(f"CLI install warning: {result.stderr}")
 
-# 4. Copy subagent definitions to ~/.claude/agents/
-# These enable TDD workflow: prd-writer → test-generator → implementer → build-feature
-agents_src = Path(__file__).parent / "agents"
-agents_dst = claude_dir / "agents"
-agents_dst.mkdir(exist_ok=True)
-
-if agents_src.exists():
-    copied = []
-    for agent_file in agents_src.glob("*.md"):
-        shutil.copy2(str(agent_file), str(agents_dst / agent_file.name))
-        copied.append(agent_file.name)
-    if copied:
-        print(f"Subagents installed: {', '.join(copied)}")
-else:
-    print("No agents directory found, skipping subagent setup")
+# 4. Subagents are discovered automatically from coda-essentials plugin
+# (no manual copy step needed — the plugin's agents/ dir is scanned by Claude Code).
 
 # 5. Create projects directory
 projects_dir = home / "projects"

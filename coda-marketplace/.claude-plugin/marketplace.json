@@ -1,0 +1,31 @@
+{
+  "name": "coda",
+  "owner": {
+    "name": "Databricks Field Engineering",
+    "email": "field-eng@databricks.com"
+  },
+  "metadata": {
+    "description": "CODA-bundled Claude Code plugins — ship with every CODA deployment",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "coda-essentials",
+      "source": "./plugins/coda-essentials",
+      "description": "Subagents, hooks, slash commands, and session lifecycle tooling bundled with every CODA instance. Includes the TDD subagent workflow (prd-writer, test-generator, implementer, build-feature), session-start git context loader, memory staleness checker, crystallization nudge, and the /til slash command.",
+      "version": "0.1.0",
+      "author": {
+        "name": "Databricks Field Engineering"
+      },
+      "category": "productivity",
+      "keywords": [
+        "coda",
+        "databricks",
+        "workshop",
+        "tdd",
+        "memory",
+        "hooks"
+      ]
+    }
+  ]
+}
