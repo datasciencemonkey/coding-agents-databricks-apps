@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import shutil
 import subprocess
@@ -15,6 +16,34 @@ home = Path(os.environ["HOME"])
 # Create ~/.claude directory
 claude_dir = home / ".claude"
 claude_dir.mkdir(exist_ok=True)
+
+# Install hook scripts into ~/.claude/scripts/ (used by settings.json hooks below).
+# Must run BEFORE settings.json is written so the referenced scripts exist.
+scripts_src = Path(__file__).parent / "claude-hooks"
+scripts_dst = claude_dir / "scripts"
+scripts_dst.mkdir(exist_ok=True)
+if scripts_src.exists():
+    installed_hooks = []
+    for hook_file in scripts_src.iterdir():
+        if hook_file.is_file():
+            dst = scripts_dst / hook_file.name
+            shutil.copy2(str(hook_file), str(dst))
+            os.chmod(dst, 0o755)
+            installed_hooks.append(hook_file.name)
+    if installed_hooks:
+        print(f"Claude hooks installed: {', '.join(installed_hooks)}")
+
+# Install slash commands (e.g., /til) into ~/.claude/commands/.
+commands_src = Path(__file__).parent / "claude-commands"
+commands_dst = claude_dir / "commands"
+commands_dst.mkdir(exist_ok=True)
+if commands_src.exists():
+    installed_commands = []
+    for cmd_file in commands_src.glob("*.md"):
+        shutil.copy2(str(cmd_file), str(commands_dst / cmd_file.name))
+        installed_commands.append(cmd_file.name)
+    if installed_commands:
+        print(f"Claude slash commands installed: {', '.join(installed_commands)}")
 
 # 1. Write settings.json for Databricks model serving (requires DATABRICKS_TOKEN)
 token = os.environ.get("DATABRICKS_TOKEN", "").strip()
@@ -91,7 +120,39 @@ if token:
             "ANTHROPIC_DEFAULT_HAIKU_MODEL": "databricks-claude-haiku-4-5",
             "ANTHROPIC_CUSTOM_HEADERS": "x-databricks-use-coding-agent-mode: true",
             "CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS": "1",
-        }
+        },
+        "hooks": {
+            "SessionStart": [{
+                "matcher": "",
+                "hooks": [
+                    {"type": "command",
+                     "command": f"python3 {scripts_dst}/check-memory-staleness.py --cwd \"$PWD\"",
+                     "timeout": 10},
+                    {"type": "command",
+                     "command": f"bash {scripts_dst}/session-context-loader.sh",
+                     "timeout": 15},
+                ],
+            }],
+            "PostToolUse": [{
+                "matcher": "Edit|Write",
+                "hooks": [{
+                    "type": "command",
+                    "command": f"bash {scripts_dst}/memory-stamp-verified.sh",
+                    "timeout": 5,
+                }],
+            }],
+            "Stop": [{
+                "matcher": "",
+                "hooks": [
+                    {"type": "command",
+                     "command": f"bash {scripts_dst}/session-crystallize-nudge.sh",
+                     "timeout": 10},
+                    {"type": "command",
+                     "command": f"bash {scripts_dst}/push-brain-to-workspace.sh",
+                     "timeout": 5},
+                ],
+            }],
+        },
     }
 
     settings_path = claude_dir / "settings.json"
@@ -171,3 +232,22 @@ print(f"Projects directory: {projects_dir}")
 # 5. Git identity and hooks are now configured by app.py's _setup_git_config()
 # (runs directly in Python before setup_claude.py, writes ~/.gitconfig and ~/.githooks/)
 print("Git identity and hooks: configured by app.py (skipping here)")
+
+# 6. Restore Claude Code auto-memory ("brain") from workspace if present.
+# This makes accumulated memories survive app redeployment. Best-effort —
+# failures are logged but don't break startup.
+if token:
+    brain_sync = Path(__file__).parent / "claude_brain_sync.py"
+    if brain_sync.exists():
+        try:
+            result = subprocess.run(
+                [sys.executable, str(brain_sync), "pull"],
+                capture_output=True, text=True, timeout=60,
+                env={**os.environ, "HOME": str(home)},
+            )
+            if result.stdout:
+                print(result.stdout.strip())
+            if result.returncode != 0 and result.stderr:
+                print(f"brain-sync pull warning: {result.stderr.strip()}")
+        except Exception as e:
+            print(f"brain-sync pull skipped: {e}")
