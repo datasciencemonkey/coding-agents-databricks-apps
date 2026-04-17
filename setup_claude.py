@@ -190,16 +190,7 @@ else:
     print("No DATABRICKS_TOKEN — skipping settings.json (will be configured after PAT setup)")
 
 # 2. Write ~/.claude.json with onboarding skip AND MCP servers
-mcp_servers = {
-    "deepwiki": {
-        "type": "http",
-        "url": "https://mcp.deepwiki.com/mcp"
-    },
-    "exa": {
-        "type": "http",
-        "url": "https://mcp.exa.ai/mcp"
-    }
-}
+mcp_servers = {}
 
 # Auto-configure team-memory MCP if URL is provided
 team_memory_url = os.environ.get("TEAM_MEMORY_MCP_URL", "").strip().rstrip("/")
@@ -209,6 +200,14 @@ if team_memory_url:
         "url": f"{team_memory_url}/mcp"
     }
     print(f"Team memory MCP configured: {team_memory_url}/mcp")
+
+# Public-internet MCPs (deepwiki, exa) are opt-in: they live on the open
+# internet and won't work in air-gapped or secure-egress deployments. Set
+# ENABLE_PUBLIC_MCPS=true only when you know the runtime can reach them.
+if os.environ.get("ENABLE_PUBLIC_MCPS", "").strip().lower() in ("1", "true", "yes"):
+    mcp_servers["deepwiki"] = {"type": "http", "url": "https://mcp.deepwiki.com/mcp"}
+    mcp_servers["exa"] = {"type": "http", "url": "https://mcp.exa.ai/mcp"}
+    print("Public MCPs enabled (ENABLE_PUBLIC_MCPS=true): deepwiki, exa")
 
 claude_json = {
     "hasCompletedOnboarding": True,
