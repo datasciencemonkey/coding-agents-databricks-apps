@@ -1,0 +1,22 @@
+[project]
+name = "grocery-intelligence"
+version = "0.1.0"
+description = "Shared utilities for the Grocery Intelligence demo pipeline"
+requires-python = ">=3.10"
+dependencies = []
+
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["grocery_intelligence*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.behave]
+paths = ["features"]
+format = ["pretty"]

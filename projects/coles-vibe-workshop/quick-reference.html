@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vibe Coding Workshop - Quick Reference Card</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --lava: #FF3621;
+    --navy: #1B3139;
+    --green: #00A972;
+    --oat: #F9F7F4;
+    --light-grey: #E8E4DF;
+    --mid-grey: #6B7A80;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 9pt;
+    line-height: 1.35;
+    color: var(--navy);
+    background: white;
+  }
+
+  .page {
+    width: 210mm;
+    height: 297mm;
+    padding: 12mm 14mm 10mm 14mm;
+    page-break-after: always;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .page:last-child { page-break-after: avoid; }
+
+  /* Header */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 3px solid var(--lava);
+    padding-bottom: 5px;
+    margin-bottom: 8px;
+  }
+
+  .header-title {
+    font-size: 14pt;
+    font-weight: 700;
+    color: var(--navy);
+  }
+
+  .header-title span { color: var(--lava); }
+
+  .header-brand {
+    font-size: 10pt;
+    font-weight: 700;
+    color: var(--lava);
+    letter-spacing: 1px;
+  }
+
+  .header-subtitle {
+    font-size: 8pt;
+    color: var(--mid-grey);
+    margin-top: 1px;
+  }
+
+  /* Grid layout */
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .grid-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+  }
+
+  .full-width { grid-column: 1 / -1; }
+
+  /* Sections */
+  .section {
+    background: var(--oat);
+    border-radius: 5px;
+    padding: 7px 9px;
+    border-left: 3px solid var(--lava);
+  }
+
+  .section.green { border-left-color: var(--green); }
+  .section.navy { border-left-color: var(--navy); }
+
+  .section-title {
+    font-size: 9pt;
+    font-weight: 700;
+    color: var(--lava);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+
+  .section.green .section-title { color: var(--green); }
+  .section.navy .section-title { color: var(--navy); }
+
+  /* Code */
+  code, .mono {
+    font-family: 'DM Mono', monospace;
+    font-size: 7.5pt;
+    background: white;
+    padding: 1px 4px;
+    border-radius: 3px;
+    border: 1px solid var(--light-grey);
+  }
+
+  .code-block {
+    font-family: 'DM Mono', monospace;
+    font-size: 7.5pt;
+    background: var(--navy);
+    color: #E8E4DF;
+    padding: 5px 7px;
+    border-radius: 4px;
+    margin: 3px 0;
+    line-height: 1.4;
+    white-space: pre-wrap;
+  }
+
+  .code-block .cmd { color: #7FD4B0; }
+  .code-block .flag { color: #FF8A75; }
+  .code-block .comment { color: #6B7A80; }
+
+  /* Tables */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 8pt;
+  }
+
+  th {
+    text-align: left;
+    font-weight: 600;
+    padding: 2px 5px;
+    border-bottom: 1.5px solid var(--navy);
+    font-size: 7.5pt;
+    color: var(--navy);
+  }
+
+  td {
+    padding: 2px 5px;
+    border-bottom: 0.5px solid var(--light-grey);
+    vertical-align: top;
+  }
+
+  td code {
+    font-size: 7pt;
+  }
+
+  /* Lists */
+  ul, ol {
+    padding-left: 14px;
+    margin: 2px 0;
+  }
+
+  li { margin-bottom: 1px; font-size: 8pt; }
+
+  /* Badges */
+  .badge {
+    display: inline-block;
+    font-size: 6.5pt;
+    font-weight: 600;
+    padding: 1px 5px;
+    border-radius: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+
+  .badge-red { background: var(--lava); color: white; }
+  .badge-green { background: var(--green); color: white; }
+  .badge-navy { background: var(--navy); color: white; }
+
+  /* Flow diagram */
+  .flow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    margin: 5px 0;
+    flex-wrap: nowrap;
+  }
+
+  .flow-step {
+    background: var(--navy);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 7.5pt;
+    font-weight: 600;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .flow-step.active { background: var(--lava); }
+  .flow-step.success { background: var(--green); }
+
+  .flow-arrow {
+    font-size: 10pt;
+    color: var(--mid-grey);
+    margin: 0 3px;
+    flex-shrink: 0;
+  }
+
+  /* Tips */
+  .tip {
+    background: white;
+    border: 1px solid var(--green);
+    border-radius: 4px;
+    padding: 4px 7px;
+    margin: 3px 0;
+    font-size: 7.5pt;
+  }
+
+  .tip-label {
+    font-weight: 700;
+    color: var(--green);
+    font-size: 7pt;
+    text-transform: uppercase;
+  }
+
+  /* Footer */
+  .footer {
+    position: absolute;
+    bottom: 8mm;
+    left: 14mm;
+    right: 14mm;
+    text-align: center;
+    font-size: 7pt;
+    color: var(--mid-grey);
+    border-top: 1px solid var(--light-grey);
+    padding-top: 4px;
+  }
+
+  /* Print styles */
+  @media print {
+    body { background: white; }
+    .page {
+      margin: 0;
+      padding: 10mm 12mm 8mm 12mm;
+    }
+    .section { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .code-block { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .badge { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .flow-step { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+
+  @media screen {
+    body { background: #ccc; }
+    .page {
+      margin: 20px auto;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      background: white;
+    }
+  }
+
+  @page {
+    size: A4;
+    margin: 0;
+  }
+</style>
+</head>
+<body>
+
+<!-- ==================== PAGE 1: Claude Code Essentials ==================== -->
+<div class="page">
+  <div class="header">
+    <div>
+      <div class="header-title">Vibe Coding Workshop <span>Quick Reference</span></div>
+      <div class="header-subtitle">Coles Group - Agentic Software Development with Databricks</div>
+    </div>
+    <div class="header-brand">[Databricks]</div>
+  </div>
+
+  <!-- TDD Workflow -->
+  <div class="section full-width" style="margin-bottom: 8px;">
+    <div class="section-title">The TDD + Agent Workflow</div>
+    <div class="flow">
+      <div class="flow-step active">1. Write Tests</div>
+      <div class="flow-arrow">&#9654;</div>
+      <div class="flow-step">2. Agent Implements</div>
+      <div class="flow-arrow">&#9654;</div>
+      <div class="flow-step">3. Run Tests</div>
+      <div class="flow-arrow">&#9654;</div>
+      <div class="flow-step">4. Iterate</div>
+      <div class="flow-arrow">&#9654;</div>
+      <div class="flow-step success">5. Review &amp; Deploy</div>
+    </div>
+    <div class="tip">
+      <span class="tip-label">Key insight:</span> Tests are unambiguous specs the agent can verify against. They prevent the agent from "going off the rails."
+    </div>
+  </div>
+
+  <div class="grid-2">
+
+    <!-- Claude Code Commands -->
+    <div class="section">
+      <div class="section-title">Claude Code Commands</div>
+      <table>
+        <tr><th>Command</th><th>Description</th></tr>
+        <tr><td><code>claude</code></td><td>Start interactive session</td></tr>
+        <tr><td><code>claude --version</code></td><td>Check installed version</td></tr>
+        <tr><td><code>claude --help</code></td><td>Show all CLI options</td></tr>
+        <tr><td><code>claude mcp list</code></td><td>List MCP server connections</td></tr>
+        <tr><td><code>/help</code></td><td>Help within a session</td></tr>
+        <tr><td><code>/clear</code></td><td>Reset conversation context</td></tr>
+        <tr><td><code>/compact</code></td><td>Compress context (save tokens)</td></tr>
+        <tr><td><code>/cost</code></td><td>Show token usage &amp; cost</td></tr>
+      </table>
+    </div>
+
+    <!-- Keyboard Shortcuts -->
+    <div class="section green">
+      <div class="section-title">Terminal Shortcuts</div>
+      <table>
+        <tr><th>Shortcut</th><th>Action</th></tr>
+        <tr><td><code>Esc</code></td><td>Cancel current generation</td></tr>
+        <tr><td><code>Ctrl+C</code></td><td>Interrupt / exit</td></tr>
+        <tr><td><code>Shift+Enter</code></td><td>Multi-line input</td></tr>
+        <tr><td><code>Up/Down</code></td><td>Scroll through history</td></tr>
+        <tr><td><code>Tab</code></td><td>Accept autocomplete</td></tr>
+      </table>
+      <div class="tip" style="margin-top: 5px;">
+        <span class="tip-label">Tip:</span> Use <code>Shift+Enter</code> to write multi-line prompts before sending.
+      </div>
+    </div>
+
+    <!-- CLAUDE.md Reference -->
+    <div class="section navy">
+      <div class="section-title">CLAUDE.md Syntax</div>
+      <div class="code-block"><span class="comment"># Project-level rules (place in repo root)</span>
+
+<span class="comment">## Code Standards</span>
+- Use PySpark for all data processing
+- All functions must have type hints
+- Follow medallion architecture
+
+<span class="comment">## Testing Standards</span>
+- Use pytest with pyspark test fixtures
+- Test with small DataFrames (5-10 rows)
+- Assert on schema, row counts, values
+
+<span class="comment">## Data Standards</span>
+- Date columns: DATE type, YYYY-MM-DD
+- Currency: DECIMAL(12,2)
+- All tables need processing_timestamp</div>
+      <div style="font-size: 7.5pt; margin-top: 3px;">
+        <strong>Levels:</strong>
+        <code>~/.claude/CLAUDE.md</code> (global) &rarr;
+        <code>./CLAUDE.md</code> (project) &rarr;
+        <code>./src/CLAUDE.md</code> (directory)
+      </div>
+    </div>
+
+    <!-- Prompt Patterns -->
+    <div class="section">
+      <div class="section-title">Common Prompt Patterns</div>
+
+      <div style="margin-bottom: 4px;">
+        <span class="badge badge-navy">Setup</span>
+        <div class="code-block">Create a new Python project called "store-pipeline" with:
+- A src/ directory for pipeline code
+- A tests/ directory for pytest tests
+- A CLAUDE.md with these rules: ...</div>
+      </div>
+
+      <div style="margin-bottom: 4px;">
+        <span class="badge badge-red">Tests First</span>
+        <div class="code-block">Write pytest tests for a function clean_transactions(df):
+- Remove rows where amount is null or negative
+- Test: given 10 rows with 2 invalid, output has 8
+<span class="comment">Write ONLY the tests. Do NOT implement yet.</span></div>
+      </div>
+
+      <div style="margin-bottom: 4px;">
+        <span class="badge badge-green">Implement</span>
+        <div class="code-block">Implement all functions to make the tests pass.
+Run the tests after each function to verify.</div>
+      </div>
+
+      <div>
+        <span class="badge badge-navy">Deploy</span>
+        <div class="code-block">Deploy using: databricks apps deploy --name my-app</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Effective Prompting Tips -->
+  <div class="section green full-width" style="margin-top: 8px;">
+    <div class="section-title">Tips for Effective Prompting</div>
+    <div class="grid-3" style="gap: 6px;">
+      <div>
+        <strong style="font-size: 7.5pt;">Be Specific</strong>
+        <ul style="font-size: 7.5pt;">
+          <li>Name exact functions, tables, columns</li>
+          <li>Provide example inputs/outputs</li>
+          <li>State constraints explicitly</li>
+        </ul>
+      </div>
+      <div>
+        <strong style="font-size: 7.5pt;">Set Boundaries</strong>
+        <ul style="font-size: 7.5pt;">
+          <li>"Write ONLY tests, do NOT implement"</li>
+          <li>Specify tech stack upfront</li>
+          <li>Declare table/schema names</li>
+        </ul>
+      </div>
+      <div>
+        <strong style="font-size: 7.5pt;">Iterate Wisely</strong>
+        <ul style="font-size: 7.5pt;">
+          <li>Start small: one function, one test</li>
+          <li>Add edge cases after green tests</li>
+          <li>Use <code>/compact</code> for long sessions</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    Page 1 of 2 &nbsp;|&nbsp; Vibe Coding Workshop &nbsp;|&nbsp; Coles Group &times; Databricks &nbsp;|&nbsp; Claude Code Essentials
+  </div>
+</div>
+
+<!-- ==================== PAGE 2: Databricks Quick Reference ==================== -->
+<div class="page">
+  <div class="header">
+    <div>
+      <div class="header-title">Databricks <span>Quick Reference</span></div>
+      <div class="header-subtitle">Unity Catalog, SQL, Apps, DABs, AI Gateway</div>
+    </div>
+    <div class="header-brand">[Databricks]</div>
+  </div>
+
+  <div class="grid-2">
+
+    <!-- Unity Catalog -->
+    <div class="section">
+      <div class="section-title">Unity Catalog Hierarchy</div>
+      <div class="code-block"><span class="cmd">catalog</span>.<span class="cmd">schema</span>.<span class="cmd">table</span>
+
+<span class="comment"># Workshop setup:</span>
+workshop_vibe_coding           <span class="comment"># catalog</span>
+  &boxur; raw_data                    <span class="comment"># shared schema</span>
+  &boxv;   &boxur; store_transactions     <span class="comment"># bronze table</span>
+  &boxv;   &boxur; products               <span class="comment"># reference table</span>
+  &boxur; &lt;your_schema&gt;              <span class="comment"># your schema</span>
+      &boxur; daily_store_metrics    <span class="comment"># your gold table</span></div>
+    </div>
+
+    <!-- Key SQL Commands -->
+    <div class="section green">
+      <div class="section-title">Key SQL Commands</div>
+      <div class="code-block"><span class="comment">-- Explore data</span>
+<span class="cmd">DESCRIBE</span> workshop_vibe_coding.raw_data.store_transactions;
+<span class="cmd">SELECT</span> * <span class="cmd">FROM</span> ... <span class="cmd">LIMIT</span> 10;
+
+<span class="comment">-- Create objects</span>
+<span class="cmd">CREATE CATALOG</span> IF NOT EXISTS my_catalog;
+<span class="cmd">CREATE SCHEMA</span> IF NOT EXISTS catalog.schema;
+
+<span class="comment">-- Permissions</span>
+<span class="cmd">GRANT</span> SELECT, MODIFY <span class="cmd">ON SCHEMA</span> catalog.schema
+  <span class="cmd">TO</span> `user@domain.com`;
+
+<span class="comment">-- Idempotent writes (upsert)</span>
+<span class="cmd">MERGE INTO</span> target <span class="cmd">USING</span> source
+  <span class="cmd">ON</span> target.id = source.id
+<span class="cmd">WHEN MATCHED THEN UPDATE SET</span> *
+<span class="cmd">WHEN NOT MATCHED THEN INSERT</span> *;</div>
+    </div>
+
+    <!-- Databricks Apps -->
+    <div class="section navy">
+      <div class="section-title">Databricks Apps Deployment</div>
+      <div style="font-size: 8pt; margin-bottom: 3px;"><strong>app.yaml</strong> format:</div>
+      <div class="code-block"><span class="comment"># app.yaml</span>
+command:
+  - "uvicorn"
+  - "app:app"
+  - "--host"
+  - "0.0.0.0"
+  - "--port"
+  - "8000"</div>
+      <div style="font-size: 8pt; margin: 3px 0;"><strong>Deploy command:</strong></div>
+      <div class="code-block"><span class="cmd">databricks apps deploy</span> <span class="flag">--name</span> store-dashboard-yourname</div>
+      <div class="tip">
+        <span class="tip-label">Requires:</span> <code>app.yaml</code> + <code>requirements.txt</code> in project root.
+      </div>
+    </div>
+
+    <!-- DABs -->
+    <div class="section">
+      <div class="section-title">Databricks Asset Bundles (DABs)</div>
+      <div class="code-block"><span class="comment"># databricks.yml</span>
+bundle:
+  name: daily-store-metrics
+
+resources:
+  jobs:
+    daily_store_metrics:
+      name: "Daily Store Metrics"
+      schedule:
+        quartz_cron_expression: "0 0 6 * * ?"
+        timezone_id: "Australia/Melbourne"
+      tasks:
+        - task_key: run_pipeline
+          notebook_task:
+            notebook_path: ./src/pipeline.py
+
+targets:
+  dev:
+    default: true
+    workspace:
+      host: https://&lt;workspace&gt;.databricks.com
+  prod:
+    workspace:
+      host: https://&lt;workspace&gt;.databricks.com</div>
+      <div class="code-block"><span class="cmd">databricks bundle validate</span>    <span class="comment"># check config</span>
+<span class="cmd">databricks bundle deploy</span> <span class="flag">-t dev</span> <span class="comment"># deploy</span>
+<span class="cmd">databricks bundle run</span> <span class="flag">-t dev</span> daily_store_metrics</div>
+    </div>
+
+    <!-- AI Gateway -->
+    <div class="section green">
+      <div class="section-title">AI Gateway</div>
+      <p style="font-size: 8pt; margin-bottom: 3px;">
+        Routes all LLM calls through Databricks for <strong>model switching</strong>,
+        <strong>rate limiting</strong>, <strong>cost tracking</strong>, and <strong>audit logging</strong>.
+      </p>
+      <ul style="font-size: 7.5pt;">
+        <li>The Coding Agents App uses AI Gateway for all Claude Code calls</li>
+        <li>MLflow auto-traces every agent session</li>
+        <li>Foundation Model API for app AI features (NL-to-SQL)</li>
+        <li>Supports: Claude, GPT-4o, DBRX, Llama, Mixtral</li>
+      </ul>
+      <div class="tip">
+        <span class="tip-label">In Lab 2:</span> The <code>/api/ask</code> endpoint uses Foundation Model API via AI Gateway to convert natural language to SQL.
+      </div>
+    </div>
+
+    <!-- databricks-sql-connector -->
+    <div class="section navy">
+      <div class="section-title">databricks-sql-connector (Python)</div>
+      <div class="code-block"><span class="cmd">from</span> databricks <span class="cmd">import</span> sql
+
+<span class="comment"># Connect</span>
+connection = sql.connect(
+    server_hostname=os.getenv(<span class="flag">"DB_HOST"</span>),
+    http_path=os.getenv(<span class="flag">"DB_HTTP_PATH"</span>),
+    access_token=os.getenv(<span class="flag">"DB_TOKEN"</span>)
+)
+
+<span class="comment"># Query</span>
+cursor = connection.cursor()
+cursor.execute(<span class="flag">"SELECT * FROM catalog.schema.table"</span>)
+rows = cursor.fetchall()
+columns = [desc[0] <span class="cmd">for</span> desc <span class="cmd">in</span> cursor.description]
+
+cursor.close()
+connection.close()</div>
+    </div>
+
+    <!-- Workshop-Specific Info -->
+    <div class="section full-width">
+      <div class="section-title">Workshop Quick Facts</div>
+      <div class="grid-3" style="gap: 6px;">
+        <div>
+          <strong style="font-size: 7.5pt;">Catalog &amp; Data</strong>
+          <ul style="font-size: 7.5pt;">
+            <li>Catalog: <code>workshop_vibe_coding</code></li>
+            <li>Raw data: <code>raw_data.store_transactions</code></li>
+            <li>Products: <code>raw_data.products</code></li>
+            <li>Your schema: <code>&lt;your_username&gt;</code></li>
+          </ul>
+        </div>
+        <div>
+          <strong style="font-size: 7.5pt;">Lab 1: Data Pipeline</strong>
+          <ul style="font-size: 7.5pt;">
+            <li>PySpark transformations</li>
+            <li>clean &rarr; enrich &rarr; aggregate</li>
+            <li>Write gold: <code>daily_store_metrics</code></li>
+            <li>Deploy as scheduled DABs job</li>
+          </ul>
+        </div>
+        <div>
+          <strong style="font-size: 7.5pt;">Lab 2: Full-Stack App</strong>
+          <ul style="font-size: 7.5pt;">
+            <li>FastAPI + HTML/Tailwind/htmx</li>
+            <li>Dashboard with filters</li>
+            <li>NL query via Foundation Model</li>
+            <li>Deploy as Databricks App</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="footer">
+    Page 2 of 2 &nbsp;|&nbsp; Vibe Coding Workshop &nbsp;|&nbsp; Coles Group &times; Databricks &nbsp;|&nbsp; Databricks Quick Reference
+  </div>
+</div>
+
+</body>
+</html>

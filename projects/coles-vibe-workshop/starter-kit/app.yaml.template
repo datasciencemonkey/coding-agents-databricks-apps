@@ -1,0 +1,16 @@
+# Databricks Apps deployment configuration
+# Replace REPLACE_WITH_SQL_WAREHOUSE_PATH with your SQL warehouse HTTP path
+
+command:
+  - uvicorn
+  - app:app
+  - --host
+  - 0.0.0.0
+  - --port
+  - "8000"
+
+env:
+  - name: DATABRICKS_HOST
+    valueFrom: "{databricks_host}"
+  - name: DATABRICKS_HTTP_PATH
+    value: "REPLACE_WITH_SQL_WAREHOUSE_PATH"

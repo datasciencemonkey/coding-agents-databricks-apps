@@ -1,0 +1,2072 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vibe Coding Best Practices — Coles Vibe Coding Workshop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  /* === THEME VARIABLES (Databricks Brand System + Extended Palette) === */
+  :root {
+    /* === DATABRICKS PRIMARY PALETTE (from corporate template) === */
+    --db-lava:       #FF3621;
+    --db-lava-light: #FF5F46;
+    --db-lava-warm:  #FE6046;
+    --db-navy:       #1B3139;
+    --db-ink:        #0B2026;
+    --db-teal:       #1B5162;
+    --db-green:      #00A972;
+    --db-oat:        #F9F7F4;
+    --db-oat-medium: #EEEDE9;
+    --db-oat-dark:   #DBD7CE;
+    --db-white:      #FFFFFF;
+    --db-black:      #000000;
+
+    /* === EXTENDED ACCENT PALETTE (from go/pitchdeck theme) === */
+    --db-burgundy:   #970F29;
+    --db-amber:      #FEAB03;
+    --db-muted-teal: #618693;
+    --db-indigo:     #4259FE;
+
+    /* === CUSTOMER BRAND === */
+    --coles-red:     #ED1C24;
+    --coles-red-glow: rgba(237, 28, 36, 0.12);
+
+    /* === DERIVED / FUNCTIONAL COLORS === */
+    --bg-primary:    var(--db-oat);
+    --bg-secondary:  var(--db-white);
+    --bg-dark:       var(--db-navy);
+    --bg-black:      var(--db-black);
+    --text-primary:  var(--db-ink);
+    --text-secondary: #4A5E68;
+    --text-on-dark:  var(--db-white);
+    --accent:        var(--db-lava);
+    --accent-hover:  #E02E1A;
+    --accent-glow:   rgba(255, 54, 33, 0.15);
+    --divider:       var(--db-oat-medium);
+
+    --font-display: 'DM Sans', sans-serif;
+    --font-body:    'DM Sans', sans-serif;
+    --font-mono:    'DM Mono', monospace;
+  }
+
+  /* === BASE RESET === */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-snap-type: y mandatory; scroll-behavior: auto; overflow-y: scroll; overflow-x: hidden; }
+  body { font-family: var(--font-body); color: var(--text-primary); background: var(--db-ink); overflow-x: hidden; }
+
+  /* === TYPOGRAPHY (4K-ready ceilings) === */
+  h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.02em; }
+  h1 { font-weight: 700; font-size: clamp(2.5rem, 4.5vw, 7rem); line-height: 1.1; }
+  h2 { font-weight: 700; font-size: clamp(1.8rem, 3vw, 4.5rem); line-height: 1.2; letter-spacing: -0.01em; }
+  h3 { font-weight: 600; font-size: clamp(1.2rem, 2vw, 2.5rem); line-height: 1.3; }
+  p, li { font-family: var(--font-body); font-weight: 400; font-size: clamp(1.1rem, 1.5vw, 2rem); line-height: 1.6; }
+  code, .mono { font-family: var(--font-mono); font-weight: 400; font-size: 0.9em; }
+
+  /* === EXECUTIVE POLISH: EYEBROW TEXT === */
+  .eyebrow {
+    font-family: var(--font-body);
+    font-weight: 500;
+    font-size: clamp(0.75rem, 0.9vw, 1.1rem);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--db-lava);
+    margin-bottom: 0.75rem;
+    display: block;
+  }
+  .dark-bg .eyebrow { color: var(--db-lava-light); }
+
+  /* === EXECUTIVE POLISH: LEAD TEXT === */
+  .lead {
+    font-family: var(--font-body);
+    font-size: clamp(1.2rem, 1.8vw, 2rem);
+    font-weight: 400;
+    line-height: 1.6;
+    color: var(--text-secondary);
+    max-width: 80%;
+    margin-bottom: 2rem;
+  }
+  .dark-bg .lead { color: rgba(255,255,255,0.7); }
+
+  /* === EXECUTIVE POLISH: ACCENT LINE === */
+  .accent-line {
+    width: 60px;
+    height: 3px;
+    background: linear-gradient(90deg, var(--db-lava), var(--db-lava-warm));
+    border-radius: 2px;
+    margin: 1rem 0 1.5rem;
+  }
+  .accent-line.wide { width: 120px; }
+  .accent-line.center { margin-left: auto; margin-right: auto; }
+
+  /* === SLIDE BASE === */
+  .slide {
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    scroll-snap-align: start;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    opacity: 1;
+  }
+  .slide.visible { opacity: 1; }
+
+  /* === PAGE SLIDES — warm oat background === */
+  .page-slide {
+    background: var(--db-oat);
+    padding: 48px 80px;
+  }
+
+  /* === COVER SLIDE — deep gradient with geometric accents === */
+  .cover-slide {
+    background: linear-gradient(135deg, var(--db-navy) 0%, var(--db-ink) 100%);
+    color: var(--text-on-dark);
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+  }
+  .cover-slide::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--db-lava) 0%, var(--db-lava-light) 50%, var(--db-green) 100%);
+  }
+  .cover-slide::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 48px;
+    background: linear-gradient(90deg,
+      var(--db-lava) 0%, var(--db-lava) 25%,
+      var(--coles-red) 25%, var(--coles-red) 50%,
+      var(--db-green) 50%, var(--db-green) 75%,
+      var(--db-teal) 75%, var(--db-teal) 100%);
+    opacity: 0.15;
+  }
+
+  /* === SECTION DIVIDER SLIDE === */
+  .divider-slide {
+    background: linear-gradient(135deg, var(--db-navy) 0%, var(--db-ink) 100%);
+    color: var(--text-on-dark);
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+  }
+  .divider-slide::before {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 110%; height: 110%;
+    background: radial-gradient(ellipse at 30% 50%, rgba(27,81,98,0.25) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  /* === ATMOSPHERIC TEXTURES === */
+  .texture-noise::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0.03;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 256px 256px;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .texture-noise > * { position: relative; z-index: 1; }
+
+  .texture-dots::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0.06;
+    background-image: radial-gradient(circle, var(--db-oat-dark) 0.5px, transparent 0.5px);
+    background-size: 20px 20px;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .texture-dots > * { position: relative; z-index: 1; }
+
+  /* === COVER STYLING === */
+  .cover-slide h1 {
+    font-family: var(--font-display);
+    font-size: clamp(2.8rem, 4.5vw, 5rem);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    margin-bottom: 16px;
+  }
+  .cover-slide .subtitle {
+    font-size: clamp(1.1rem, 1.5vw, 1.8rem);
+    font-weight: 400;
+    opacity: 0.8;
+    margin-bottom: 32px;
+  }
+  .cover-slide .tagline {
+    font-size: clamp(1rem, 1.3vw, 1.5rem);
+    font-weight: 500;
+    color: var(--db-green);
+    letter-spacing: 0.5px;
+  }
+  .cover-slide .cover-badge {
+    display: inline-block;
+    background: var(--accent-glow);
+    color: var(--db-lava-light);
+    border: 1px solid rgba(255,54,33,0.3);
+    padding: 8px 28px;
+    border-radius: 28px;
+    font-family: var(--font-mono);
+    font-size: clamp(0.85rem, 1vw, 1.2rem);
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 40px;
+  }
+  .cover-slide .cover-decoration {
+    position: absolute;
+    width: 600px; height: 600px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,54,33,0.06) 0%, transparent 70%);
+    top: -200px; right: -200px;
+    pointer-events: none;
+  }
+  .cover-slide .cover-decoration-2 {
+    position: absolute;
+    width: 400px; height: 400px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0,169,114,0.06) 0%, transparent 70%);
+    bottom: -150px; left: -100px;
+    pointer-events: none;
+  }
+
+  /* === DATABRICKS LOGO === */
+  .db-logo { height: 28px; width: auto; }
+  .db-logo-cover { height: 40px; width: auto; margin-bottom: 20px; }
+
+  /* === DIVIDER STYLING === */
+  .divider-slide h1 {
+    font-family: var(--font-display);
+    font-size: clamp(2.2rem, 3.5vw, 4rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 12px;
+    position: relative;
+    z-index: 1;
+  }
+  .divider-slide h1::before {
+    content: '';
+    display: block;
+    width: 60px; height: 4px;
+    background: var(--db-lava);
+    border-radius: 2px;
+    margin: 0 auto 20px;
+  }
+  .divider-slide .divider-subtitle {
+    font-size: clamp(1.1rem, 1.4vw, 1.6rem);
+    font-weight: 400;
+    opacity: 0.7;
+    margin-bottom: 20px;
+    position: relative;
+    z-index: 1;
+  }
+  .divider-slide .divider-time {
+    display: inline-block;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    padding: 6px 22px;
+    border-radius: 24px;
+    font-family: var(--font-mono);
+    font-size: clamp(0.85rem, 1vw, 1.2rem);
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    position: relative;
+    z-index: 1;
+  }
+  .divider-slide .divider-number {
+    font-family: var(--font-display);
+    font-size: clamp(4rem, 8vw, 8rem);
+    font-weight: 700;
+    color: rgba(255,255,255,0.04);
+    position: absolute;
+    top: 60px; left: 80px;
+    line-height: 1;
+  }
+
+  /* === PAGE HEADER — branded with lava accent === */
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: none;
+    padding-bottom: 16px;
+    margin-bottom: 24px;
+    flex-shrink: 0;
+    position: relative;
+  }
+  .page-header::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0;
+    width: 60px; height: 4px;
+    background: var(--db-lava);
+    border-radius: 2px;
+  }
+  .page-header h2 {
+    font-family: var(--font-display);
+    font-size: clamp(1.5rem, 2vw, 2.5rem);
+    font-weight: 700;
+    color: var(--db-ink);
+    letter-spacing: -0.02em;
+  }
+  .page-header h2::before {
+    content: '';
+    display: inline-block;
+    width: 22px;
+    height: 24px;
+    background: url("data:image/svg+xml,%3Csvg viewBox='0 0 105 113' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M98.9 46.6L52.3 72.9L2.4 44.8L0 46.1V66.5L52.3 95.9L98.9 69.7V80.5L52.3 106.8L2.4 78.7L0 80V83.5L52.3 112.9L104.5 83.5V63.1L102.1 61.8L52.3 89.8L5.6 63.6V52.8L52.3 79L104.5 49.6V29.5L101.9 28L52.3 55.9L8 31.1L52.3 6.2L88.7 26.7L91.9 24.9V22.4L52.3 0.1L0 29.5V32.7L52.3 62.1L98.9 35.8V46.6Z' fill='%23FF3621'/%3E%3C/svg%3E") no-repeat center/contain;
+    margin-right: 10px;
+    vertical-align: middle;
+  }
+  .page-header .track-badge {
+    background: var(--db-green);
+    color: white;
+    padding: 6px 20px;
+    border-radius: 24px;
+    font-family: var(--font-mono);
+    font-size: clamp(0.85rem, 1vw, 1.2rem);
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+
+  /* === CONTENT AREA === */
+  .page-content { flex: 1; overflow: hidden; }
+  .page-content h3 {
+    font-family: var(--font-display);
+    font-size: clamp(1.1rem, 1.4vw, 1.6rem);
+    font-weight: 700;
+    color: var(--db-teal);
+    margin: 20px 0 10px;
+    letter-spacing: -0.01em;
+  }
+  .page-content h3:first-child { margin-top: 0; }
+  .page-content h4 {
+    font-family: var(--font-display);
+    font-size: clamp(1.05rem, 1.3vw, 1.5rem);
+    font-weight: 600;
+    color: var(--db-ink);
+    margin: 14px 0 7px;
+  }
+  .page-content p { font-family: var(--font-body); font-size: clamp(1rem, 1.2vw, 1.4rem); line-height: 1.6; margin-bottom: 10px; color: var(--text-primary); }
+  .page-content ul, .page-content ol { font-size: clamp(1rem, 1.2vw, 1.4rem); line-height: 1.6; margin-left: 28px; margin-bottom: 10px; }
+  .page-content li { margin-bottom: 4px; font-size: clamp(1rem, 1.2vw, 1.4rem); }
+
+  /* === CODE BLOCKS — Catppuccin with lava accent === */
+  .code-block {
+    background: #1e1e2e;
+    color: #cdd6f4;
+    border-radius: 12px;
+    border-top: 3px solid var(--db-lava);
+    padding: 16px 18px;
+    font-family: var(--font-mono);
+    font-size: clamp(0.95rem, 1.1vw, 1.3rem);
+    line-height: 1.5;
+    white-space: pre;
+    overflow-x: auto;
+    margin: 12px 0;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+  .code-block .keyword { color: #cba6f7; }
+  .code-block .string { color: #a6e3a1; }
+  .code-block .comment { color: #6c7086; }
+  .code-block .function { color: #89b4fa; }
+  .code-block .type { color: #f9e2af; }
+  .code-block .decorator { color: #fab387; }
+  .code-block .label {
+    display: block;
+    color: #89b4fa;
+    font-weight: 500;
+    margin-bottom: 6px;
+    font-size: clamp(0.9rem, 1vw, 1.15rem);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  /* === INLINE CODE === */
+  code {
+    background: var(--db-oat-medium);
+    padding: 2px 7px;
+    border-radius: 5px;
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+    color: var(--db-teal);
+  }
+
+  /* === REFINED CARDS (Brand System) === */
+  .card {
+    padding: 2rem;
+    border-radius: 12px;
+    background: var(--db-white);
+    border: 1px solid var(--db-oat-medium);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.03);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+  }
+  .dark-bg .card {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 4px 24px rgba(0,0,0,0.2);
+    color: white;
+  }
+  .dark-bg .card:hover {
+    background: rgba(255,255,255,0.09);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  }
+  .dark-bg .card h3 { color: white; }
+  .dark-bg .card p, .dark-bg .card li { color: rgba(255,255,255,0.7); }
+
+  /* === TIP / WARNING BOXES — card style === */
+  .tip-box {
+    background: var(--db-white);
+    border: 1px solid var(--db-oat-medium);
+    border-left: 4px solid var(--db-green);
+    padding: 16px 20px;
+    border-radius: 0 12px 12px 0;
+    margin: 12px 0;
+    font-size: clamp(0.9rem, 1vw, 1.15rem);
+    line-height: 1.5;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  .tip-box strong { color: var(--db-green); }
+  .warning-box {
+    background: var(--db-white);
+    border: 1px solid var(--db-oat-medium);
+    border-left: 4px solid #ff9800;
+    padding: 16px 20px;
+    border-radius: 0 12px 12px 0;
+    margin: 12px 0;
+    font-size: clamp(0.9rem, 1vw, 1.15rem);
+    line-height: 1.5;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  .warning-box strong { color: #e65100; }
+
+  /* === PHASE BADGE === */
+  .phase-badge {
+    display: inline-block;
+    background: var(--db-navy);
+    color: var(--text-on-dark);
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-family: var(--font-mono);
+    font-size: clamp(0.9rem, 1vw, 1.15rem);
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+  }
+
+  /* === TIME BADGE === */
+  .time-badge {
+    display: inline-block;
+    background: var(--db-green);
+    color: white;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-family: var(--font-mono);
+    font-size: clamp(0.9rem, 1vw, 1.15rem);
+    font-weight: 600;
+    margin-left: 8px;
+  }
+
+  /* === GRID LAYOUTS === */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+  .three-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 18px;
+  }
+  .four-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 16px;
+  }
+
+  /* === SUCCESS BOX — card style === */
+  .success-box {
+    background: var(--db-white);
+    border: 1px solid var(--db-oat-medium);
+    border-left: 4px solid var(--db-green);
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin: 12px 0;
+    font-size: clamp(0.9rem, 1vw, 1.15rem);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  .success-box h4 { color: var(--db-green); margin-top: 0; }
+
+  /* === CHECKPOINT BOX — card style === */
+  .checkpoint-box {
+    background: var(--db-white);
+    border: 1px solid var(--db-oat-medium);
+    border-left: 4px solid var(--db-teal);
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin: 12px 0;
+    font-size: clamp(0.9rem, 1vw, 1.15rem);
+    line-height: 1.5;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  .checkpoint-box strong { color: var(--db-teal); }
+
+  /* === TEAM BOX — card style === */
+  .team-box {
+    background: var(--db-white);
+    border: 1px solid var(--db-oat-medium);
+    border-left: 4px solid #9c27b0;
+    padding: 16px 20px;
+    border-radius: 0 12px 12px 0;
+    margin: 12px 0;
+    font-size: clamp(0.9rem, 1vw, 1.15rem);
+    line-height: 1.5;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  .team-box strong { color: #7b1fa2; }
+
+  /* === DATA TABLE — oat-toned alternating rows === */
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: clamp(0.9rem, 1vw, 1.15rem);
+    margin: 12px 0;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  .data-table th {
+    background: var(--db-navy);
+    color: var(--text-on-dark);
+    padding: 10px 14px;
+    text-align: left;
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: clamp(0.85rem, 0.95vw, 1.1rem);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .data-table td {
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--db-oat-medium);
+    background: var(--db-white);
+  }
+  .data-table tr:nth-child(even) td { background: var(--db-oat); }
+
+  /* === PAGE FOOTER — subtle === */
+  .page-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 2px solid var(--db-lava);
+    padding-top: 10px;
+    margin-top: auto;
+    font-family: var(--font-mono);
+    font-size: clamp(0.85rem, 1vw, 1.15rem);
+    color: var(--text-secondary);
+    flex-shrink: 0;
+    opacity: 0.7;
+  }
+
+  /* === PROMPT BLOCK — premium lava-accented === */
+  .prompt-block {
+    background: var(--db-ink);
+    border: 1px solid rgba(255,54,33,0.25);
+    border-top: 3px solid var(--db-lava);
+    border-radius: 12px;
+    padding: 22px 20px 18px;
+    font-family: var(--font-mono);
+    font-size: clamp(0.95rem, 1.1vw, 1.3rem);
+    line-height: 1.5;
+    color: #e0e0e0;
+    white-space: pre-wrap;
+    margin: 16px 0;
+    position: relative;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  }
+  .prompt-block::before {
+    content: 'PASTE INTO CLAUDE CODE';
+    position: absolute;
+    top: -11px; left: 16px;
+    background: var(--db-lava);
+    color: white;
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    font-weight: 700;
+    padding: 3px 12px;
+    border-radius: 4px;
+    letter-spacing: 1.5px;
+  }
+
+  /* === PIPELINE DIAGRAM === */
+  .pipeline-flow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin: 18px 0;
+    font-size: clamp(0.9rem, 1vw, 1.15rem);
+    font-weight: 600;
+  }
+  .pipeline-flow .stage {
+    padding: 12px 22px;
+    border-radius: 10px;
+    text-align: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  }
+  .pipeline-flow .bronze { background: #CD7F32; color: white; }
+  .pipeline-flow .silver { background: #C0C0C0; color: var(--db-navy); }
+  .pipeline-flow .gold { background: #FFD700; color: var(--db-navy); }
+  .pipeline-flow .arrow { color: var(--db-oat-dark); font-size: 1.8rem; }
+
+  /* === CHECKLIST === */
+  .checklist { list-style: none; margin-left: 0; }
+  .checklist li { padding-left: 28px; position: relative; }
+  .checklist li::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0.35em;
+    width: 16px; height: 16px;
+    border: 2px solid var(--db-oat-dark);
+    border-radius: 4px;
+  }
+
+  /* === BIG QUOTE — branded === */
+  .big-quote {
+    font-size: clamp(1rem, 1.2vw, 1.4rem);
+    font-style: italic;
+    border-left: 4px solid var(--db-lava);
+    padding: 16px 22px;
+    margin: 12px 0;
+    background: var(--db-white);
+    border-radius: 0 12px 12px 0;
+    line-height: 1.55;
+    color: var(--text-primary);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  .big-quote .attribution {
+    display: block;
+    font-style: normal;
+    font-family: var(--font-mono);
+    font-size: clamp(0.9rem, 1vw, 1.15rem);
+    font-weight: 600;
+    color: var(--db-lava);
+    margin-top: 8px;
+  }
+
+  /* === CONCEPT CARD — card style === */
+  .concept-card {
+    background: var(--db-white);
+    border-radius: 12px;
+    padding: 16px 18px;
+    border: 1px solid var(--db-oat-medium);
+    border-top: 3px solid var(--db-green);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .concept-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+  .concept-card h4 { font-family: var(--font-display); font-size: clamp(0.9rem, 1vw, 1.15rem); font-weight: 700; color: var(--db-teal); margin: 0 0 6px; }
+  .concept-card p { font-size: clamp(0.9rem, 1vw, 1.15rem); line-height: 1.5; margin: 0; color: var(--text-secondary); }
+
+  /* === NUMBERED STEP === */
+  .step-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: var(--db-lava);
+    color: white;
+    font-family: var(--font-mono);
+    font-size: clamp(0.9rem, 1vw, 1.15rem);
+    font-weight: 700;
+    margin-right: 8px;
+    flex-shrink: 0;
+  }
+
+  /* === LOOP DIAGRAM === */
+  .loop-diagram {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin: 14px 0;
+    font-size: clamp(0.9rem, 1vw, 1.15rem);
+    font-weight: 600;
+  }
+  .loop-diagram .loop-step {
+    padding: 10px 16px;
+    border-radius: 10px;
+    text-align: center;
+    background: var(--db-navy);
+    color: white;
+    min-width: 140px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  }
+  .loop-diagram .loop-step.human { background: var(--db-green); }
+  .loop-diagram .loop-step.agent { background: var(--db-teal); }
+  .loop-diagram .loop-arrow { color: var(--db-oat-dark); font-size: 1.3rem; }
+
+  /* === SCALE BAR === */
+  .scale-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 6px 0;
+    font-size: clamp(0.9rem, 1vw, 1.15rem);
+  }
+  .scale-bar .bar {
+    height: 14px;
+    border-radius: 7px;
+    background: linear-gradient(90deg, var(--db-teal) 0%, var(--db-green) 100%);
+  }
+  .scale-bar .bar-label {
+    min-width: 200px;
+    font-weight: 500;
+    text-align: right;
+    color: var(--text-primary);
+  }
+  .scale-bar .bar-value {
+    font-family: var(--font-mono);
+    font-size: 0.88em;
+    color: var(--text-secondary);
+    min-width: 120px;
+  }
+
+  /* === INSIGHT BOX — dark premium callout === */
+  .insight-box {
+    background: var(--db-navy);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-left: 4px solid var(--db-lava);
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin: 10px 0;
+    font-size: clamp(0.9rem, 1vw, 1.15rem);
+    line-height: 1.5;
+    font-weight: 500;
+    text-align: center;
+    color: var(--text-on-dark);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  }
+
+  /* === MCP TYPE CARD — card style === */
+  .mcp-card {
+    background: var(--db-white);
+    border-radius: 12px;
+    padding: 20px 22px;
+    border: 1px solid var(--db-oat-medium);
+    border-top: 4px solid var(--db-green);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    position: relative;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .mcp-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+  .mcp-card.managed { border-top-color: var(--db-green); }
+  .mcp-card.external { border-top-color: #7c3aed; }
+  .mcp-card.custom { border-top-color: #f59e0b; }
+  .mcp-card .card-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    font-size: 1.25rem;
+    margin-bottom: 10px;
+  }
+  .mcp-card.managed .card-icon { background: rgba(0,169,114,0.1); }
+  .mcp-card.external .card-icon { background: rgba(124,58,237,0.1); }
+  .mcp-card.custom .card-icon { background: rgba(245,158,11,0.1); }
+  .mcp-card h4 { font-family: var(--font-display); font-size: clamp(0.9rem, 1vw, 1.15rem); font-weight: 700; color: var(--db-ink); margin: 0 0 6px; }
+  .mcp-card .card-subtitle { font-size: clamp(0.9rem, 1vw, 1.15rem); color: var(--text-secondary); margin: 0 0 10px; font-style: italic; }
+  .mcp-card ul { font-size: clamp(0.9rem, 1vw, 1.15rem); line-height: 1.55; margin: 0 0 0 18px; color: var(--text-primary); }
+  .mcp-card li { margin-bottom: 3px; }
+
+  /* === MCP DIAGRAM === */
+  .mcp-diagram {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    margin: 18px 0 14px;
+    padding: 18px 24px;
+    background: linear-gradient(135deg, var(--db-oat) 0%, var(--db-white) 50%, var(--db-oat) 100%);
+    border-radius: 12px;
+    border: 1px solid var(--db-oat-medium);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  .mcp-diagram .mcp-node {
+    text-align: center;
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-size: clamp(0.9rem, 1vw, 1.15rem);
+    font-weight: 600;
+  }
+  .mcp-diagram .mcp-agent {
+    background: var(--db-navy);
+    color: white;
+    min-width: 120px;
+  }
+  .mcp-diagram .mcp-protocol {
+    background: var(--db-green);
+    color: white;
+    min-width: 160px;
+    padding: 12px 24px;
+    font-size: clamp(0.85rem, 0.95vw, 1.1rem);
+  }
+  .mcp-diagram .mcp-tools {
+    background: var(--db-white);
+    border: 2px solid var(--db-green);
+    color: var(--db-navy);
+    min-width: 120px;
+  }
+  .mcp-diagram .mcp-arrow {
+    font-size: 1.3rem;
+    color: var(--db-green);
+    padding: 0 10px;
+    font-weight: 700;
+  }
+
+  /* === TAG / PILL LABELS === */
+  .tag {
+    display: inline-block;
+    font-family: var(--font-body);
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 0.25rem 0.75rem;
+    border-radius: 100px;
+    background: var(--db-oat);
+    color: var(--db-ink);
+    border: 1px solid var(--db-oat-medium);
+  }
+  .tag.lava { background: rgba(255,54,33,0.1); color: var(--db-lava); border-color: rgba(255,54,33,0.2); }
+  .tag.green { background: rgba(0,169,114,0.1); color: #007a53; border-color: rgba(0,169,114,0.2); }
+  .tag.teal { background: rgba(27,81,98,0.1); color: var(--db-teal); border-color: rgba(27,81,98,0.2); }
+  .tag.amber { background: rgba(254,171,3,0.1); color: #b87800; border-color: rgba(254,171,3,0.2); }
+  .dark-bg .tag { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.8); border-color: rgba(255,255,255,0.15); }
+
+  /* === PROGRESS BAR (top fixed) === */
+  .progress-bar {
+    position: fixed;
+    top: 0; left: 0;
+    height: 3px;
+    background: var(--accent);
+    z-index: 100;
+    transition: width 0.3s ease;
+  }
+
+  /* === NAV DOTS (right side) === */
+  .nav-dots {
+    position: fixed;
+    right: 1.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 100;
+  }
+  .nav-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--db-oat-medium);
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    padding: 0;
+  }
+  .nav-dot.active {
+    background: var(--accent);
+    transform: scale(1.4);
+  }
+
+  /* === SLIDE FOOTER (brand system) === */
+  .slide-footer {
+    position: absolute;
+    bottom: 1.5rem;
+    right: 2rem;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--db-oat-dark);
+    letter-spacing: 0.05em;
+    opacity: 0.6;
+  }
+  .dark-bg .slide-footer { color: rgba(255,255,255,0.25); }
+
+  /* === RESPONSIVE === */
+  @media (max-width: 768px) {
+    .nav-dots { display: none; }
+    .slide { padding: 1.5rem; }
+    .two-col, .three-col, .four-col { grid-template-columns: 1fr; }
+    .page-slide { padding: 24px 20px; }
+  }
+
+  /* === PRINT STYLESHEET === */
+  @media print {
+    html { scroll-snap-type: none; overflow: visible; }
+    .slide {
+      height: auto;
+      min-height: 100vh;
+      scroll-snap-align: none;
+      page-break-after: always;
+      break-after: page;
+      page-break-inside: avoid;
+      break-inside: avoid;
+      overflow: visible;
+      padding: 2rem 2.5rem;
+    }
+    .slide:last-child { page-break-after: auto; }
+    .progress-bar,
+    .nav-dots,
+    .slide-footer { display: none !important; }
+    *, *::before, *::after {
+      animation: none !important;
+      transition: none !important;
+    }
+    .slide, .reveal-item, .timeline-item {
+      opacity: 1 !important;
+      transform: none !important;
+    }
+    .texture-noise::after,
+    .texture-dots::after { display: none; }
+    .slide-dark, .slide-ink, .cover-slide, .divider-slide {
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+      color-adjust: exact;
+    }
+    .dark-bg .card {
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+      border: 1px solid rgba(255,255,255,0.2);
+      background: rgba(255,255,255,0.1);
+    }
+    img, .arch-diagram, .image-full, .image-split { page-break-inside: avoid; }
+    .card, .slide-media, .image-full {
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+  }
+
+  /* === REDUCED MOTION === */
+  @media (prefers-reduced-motion: reduce) {
+    .slide { scroll-behavior: auto; }
+    .card, .concept-card, .mcp-card { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+<nav class="nav-dots" aria-label="Slide navigation"></nav>
+
+<!-- ============================================================ -->
+<!-- BLOCK A: "HOW TO THINK" (THEORY)                              -->
+<!-- ============================================================ -->
+
+<!-- ============================================================ -->
+<!-- SLIDE 1: COVER                                                -->
+<!-- ============================================================ -->
+<section class="slide cover-slide dark-bg texture-noise" aria-label="Cover">
+  <div style="position:absolute;top:0;left:0;width:100%;height:100%;overflow:hidden;pointer-events:none;">
+    <div style="position:absolute;right:-80px;top:-80px;width:400px;height:400px;border:2px solid rgba(255,54,33,0.08);border-radius:50%;"></div>
+    <div style="position:absolute;right:-40px;top:-40px;width:320px;height:320px;border:2px solid rgba(255,54,33,0.05);border-radius:50%;"></div>
+    <div style="position:absolute;left:-120px;bottom:-120px;width:500px;height:500px;border:2px solid rgba(255,255,255,0.03);border-radius:50%;"></div>
+  </div>
+  <div class="cover-decoration"></div>
+  <div class="cover-decoration-2"></div>
+  <div class="cover-badge">Best Practices</div>
+  <svg class="db-logo-cover" viewBox="0 0 713 113" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Databricks">
+<g clip-path="url(#clip0_on_dark)">
+<path d="M98.9 46.5996L52.3 72.8996L2.4 44.7996L0 46.0996V66.4996L52.3 95.8996L98.9 69.6996V80.4996L52.3 106.8L2.4 78.6996L0 79.9996V83.4996L52.3 112.9L104.5 83.4996V63.0996L102.1 61.7996L52.3 89.7996L5.6 63.5996V52.7996L52.3 78.9996L104.5 49.5996V29.4996L101.9 27.9996L52.3 55.8996L8 31.0996L52.3 6.19961L88.7 26.6996L91.9 24.8996V22.3996L52.3 0.0996094L0 29.4996V32.6996L52.3 62.0996L98.9 35.7996V46.5996Z" fill="#FF3621"/>
+<path d="M202.2 96.1994V6.39941H188.4V39.9994C188.4 40.4994 188.1 40.8994 187.6 41.0994C187.1 41.2994 186.6 41.0994 186.3 40.7994C181.6 35.2994 174.3 32.1994 166.3 32.1994C149.2 32.1994 135.8 46.5994 135.8 64.9994C135.8 73.9994 138.9 82.2994 144.6 88.3994C150.3 94.4994 158 97.7994 166.3 97.7994C174.2 97.7994 181.5 94.4994 186.3 88.7994C186.6 88.3994 187.2 88.2994 187.6 88.3994C188.1 88.5994 188.4 88.9994 188.4 89.4994V96.1994H202.2ZM169.3 85.2994C158.3 85.2994 149.7 76.3994 149.7 64.9994C149.7 53.5994 158.3 44.6994 169.3 44.6994C180.3 44.6994 188.9 53.5994 188.9 64.9994C188.9 76.3994 180.3 85.2994 169.3 85.2994Z" fill="white"/>
+<path d="M276 96.0996V33.6996H262.3V39.9996C262.3 40.4996 262 40.8996 261.5 41.0996C261 41.2996 260.5 41.0996 260.2 40.6996C255.6 35.1996 248.4 32.0996 240.2 32.0996C223.1 32.0996 209.7 46.4996 209.7 64.8996C209.7 83.2996 223.1 97.6996 240.2 97.6996C248.1 97.6996 255.4 94.3996 260.2 88.5996C260.5 88.1996 261.1 88.0996 261.5 88.1996C262 88.3996 262.3 88.7996 262.3 89.2996V96.0996H276ZM243.3 85.2996C232.3 85.2996 223.7 76.3996 223.7 64.9996C223.7 53.5996 232.3 44.6996 243.3 44.6996C254.3 44.6996 262.9 53.5996 262.9 64.9996C262.9 76.3996 254.3 85.2996 243.3 85.2996Z" fill="white"/>
+<path d="M314.4 97.1994C318.8 97.1994 322.7 96.7994 324.9 96.4994V84.4994C323.1 84.6994 319.9 84.8994 318 84.8994C312.4 84.8994 308.1 83.8994 308.1 71.7994V46.0994C308.1 45.3994 308.6 44.8994 309.3 44.8994H322.8V33.5994H309.3C308.6 33.5994 308.1 33.0994 308.1 32.3994V14.3994H294.3V32.4994C294.3 33.1994 293.8 33.6994 293.1 33.6994H283.5V44.9994H293.1C293.8 44.9994 294.3 45.4994 294.3 46.1994V75.2994C294.3 97.1994 308.9 97.1994 314.4 97.1994Z" fill="white"/>
+<path d="M393.3 96.1996V33.6996H379.6V39.9996C379.6 40.4996 379.3 40.8996 378.8 41.0996C378.3 41.2996 377.8 41.0996 377.5 40.6996C372.9 35.1996 365.7 32.0996 357.5 32.0996C340.3 32.0996 327 46.4996 327 64.9996C327 83.4996 340.4 97.7996 357.5 97.7996C365.4 97.7996 372.7 94.4996 377.5 88.6996C377.8 88.2996 378.4 88.1996 378.8 88.2996C379.3 88.4996 379.6 88.8996 379.6 89.3996V96.1996H393.3ZM360.6 85.2996C349.6 85.2996 341 76.3996 341 64.9996C341 53.5996 349.6 44.6996 360.6 44.6996C371.6 44.6996 380.2 53.5996 380.2 64.9996C380.2 76.3996 371.6 85.2996 360.6 85.2996Z" fill="white"/>
+<path d="M418.4 88.7994C418.5 88.7994 418.7 88.6994 418.8 88.6994C419.1 88.6994 419.5 88.8994 419.7 89.0994C424.4 94.5994 431.7 97.6994 439.7 97.6994C456.8 97.6994 470.2 83.2994 470.2 64.8994C470.2 55.8994 467.1 47.5994 461.4 41.4994C455.7 35.3994 448 32.0994 439.7 32.0994C431.8 32.0994 424.5 35.3994 419.7 41.0994C419.4 41.4994 418.9 41.5994 418.4 41.4994C417.9 41.2994 417.6 40.8994 417.6 40.3994V6.39941H403.8V96.1994H417.6V89.8994C417.6 89.3994 417.9 88.9994 418.4 88.7994ZM417 64.9994C417 53.5994 425.6 44.6994 436.6 44.6994C447.6 44.6994 456.2 53.5994 456.2 64.9994C456.2 76.3994 447.6 85.2994 436.6 85.2994C425.6 85.2994 417 76.2994 417 64.9994Z" fill="white"/>
+<path d="M510.1 46.4994C511.4 46.4994 512.6 46.5994 513.4 46.7994V32.5994C512.9 32.4994 512 32.3994 511.1 32.3994C503.9 32.3994 497.3 36.0994 493.8 41.9994C493.5 42.4994 493 42.6994 492.5 42.4994C492 42.3994 491.6 41.8994 491.6 41.3994V33.6994H477.9V96.2994H491.7V68.6994C491.7 54.9994 498.7 46.4994 510.1 46.4994Z" fill="white"/>
+<path d="M536.1 33.6992H522.1V96.2992H536.1V33.6992Z" fill="white"/>
+<path d="M528.9 6.49902C524.2 6.49902 520.4 10.299 520.4 14.999C520.4 19.699 524.2 23.499 528.9 23.499C533.6 23.499 537.4 19.699 537.4 14.999C537.4 10.299 533.6 6.49902 528.9 6.49902Z" fill="white"/>
+<path d="M577.1 32.0996C557.9 32.0996 544 45.8996 544 64.9996C544 74.2996 547.3 82.5996 553.2 88.5996C559.2 94.5996 567.6 97.8996 577 97.8996C584.8 97.8996 590.8 96.3996 602.2 87.9996L594.3 79.6996C588.7 83.3996 583.5 85.1996 578.4 85.1996C566.8 85.1996 558.1 76.4996 558.1 64.9996C558.1 53.4996 566.8 44.7996 578.4 44.7996C583.9 44.7996 589 46.5996 594.1 50.2996L602.9 41.9996C592.6 33.1996 583.3 32.0996 577.1 32.0996Z" fill="white"/>
+<path d="M626.5 68.699C626.7 68.499 627 68.399 627.3 68.399H627.4C627.7 68.399 628 68.599 628.3 68.799L650.4 96.199H667.4L638.8 61.599C638.4 61.099 638.4 60.399 638.9 59.999L665.2 33.699H648.3L625.6 56.499C625.3 56.799 624.8 56.899 624.3 56.799C623.9 56.599 623.6 56.199 623.6 55.699V6.49902H609.7V96.299H623.5V71.899C623.5 71.599 623.6 71.199 623.9 70.999L626.5 68.699Z" fill="white"/>
+<path d="M689.9 97.799C701.2 97.799 712.7 90.899 712.7 77.799C712.7 69.199 707.3 63.299 696.3 59.699L688.8 57.199C683.7 55.499 681.3 53.099 681.3 49.799C681.3 45.999 684.7 43.399 689.5 43.399C694.1 43.399 698.2 46.399 700.8 51.599L711.9 45.599C707.8 37.199 699.3 31.999 689.5 31.999C677.1 31.999 668.1 39.999 668.1 50.899C668.1 59.599 673.3 65.399 684 68.799L691.7 71.299C697.1 72.999 699.4 75.199 699.4 78.699C699.4 83.999 694.5 85.899 690.3 85.899C684.7 85.899 679.7 82.299 677.3 76.399L666 82.399C669.7 91.899 678.8 97.799 689.9 97.799Z" fill="white"/>
+</g>
+<defs><clipPath id="clip0_on_dark"><rect width="712.8" height="113" fill="white"/></clipPath></defs>
+</svg>
+  <h1>Vibe Coding Best Practices</h1>
+  <p class="subtitle">Coles &times; Databricks Vibe Coding Workshop &mdash; 9:30 AM &ndash; 4:00 PM</p>
+  <p class="tagline">A Guide to Agentic Software Development with Claude</p>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 2: WHAT IS VIBE CODING + BRILLIANT NEW EMPLOYEE         -->
+<!-- ============================================================ -->
+<section class="slide page-slide" aria-label="What is Vibe Coding?">
+  <div class="page-header">
+    <h2>What is Vibe Coding?</h2>
+    <span class="track-badge">Block A: How to Think</span>
+  </div>
+  <div class="page-content">
+    <div class="big-quote">
+      "There's a new kind of coding I call 'vibe coding', where you fully give in to the vibes, embrace exponentials, and forget that the code even exists."
+      <span class="attribution">&mdash; Andrej Karpathy, February 2025</span>
+    </div>
+
+    <div class="two-col" style="margin-top: 12px;">
+      <div>
+        <h3>Traditional vs Agentic Development</h3>
+        <div class="concept-card" style="border-top-color: #999; margin-bottom: 10px;">
+          <h4 style="color: #666;">Traditional Development</h4>
+          <p>Human writes every line of code, handles all implementation details, debugs and iterates manually. Speed limited by typing and cognitive load.</p>
+        </div>
+        <div class="concept-card">
+          <h4>Agentic Development</h4>
+          <p>Human specifies intent via tests, specs, and CLAUDE.md. Agent implements, self-corrects by reading test failures. Speed limited by quality of direction, not typing.</p>
+        </div>
+        <div class="concept-card" style="border-top: 3px solid var(--db-lava); margin-top: 10px;">
+          <h4 style="color: var(--db-lava);">Rule #1: Just Say What You Want</h4>
+          <p>You literally type what you want and it happens. Don't write config files by hand. Have a conversation instead. Want behavior to change? Say how. See a technique? Paste it in. Everything is just markdown: CLAUDE.md, skills, hooks. The progression: say it &rarr; curate it &rarr; wire up tools (often just CLI instructions).</p>
+        </div>
+      </div>
+      <div>
+        <h3>The "Brilliant New Employee"</h3>
+        <p>Think of Claude as a <strong>brilliant but brand-new employee</strong> who just joined your team today:</p>
+        <h4><span class="step-num">1</span> Deep Technical Skills</h4>
+        <p>Knows Python, PySpark, SQL, FastAPI, React &mdash; but has zero context on <em>your</em> norms or architecture decisions.</p>
+        <h4 style="margin-top: 8px;"><span class="step-num">2</span> Excels With Clear Direction</h4>
+        <p>Given a precise spec, produces excellent code. Given a vague request, produces plausible-looking code that misses the mark.</p>
+        <h4 style="margin-top: 8px;"><span class="step-num">3</span> Needs Explicit Context</h4>
+        <p>"Always PySpark, never pandas." "Snake_case for all columns." "Tests before code." Won't infer your team's standards.</p>
+      </div>
+    </div>
+
+    <div class="insight-box">Your job shifts from WRITING code to DIRECTING an exceptionally capable engineer. Invest time in specs upfront, not in writing code.</div>
+  </div>
+  <div class="page-footer">
+    <span>Coles Vibe Coding Workshop</span>
+    <span>Page 2</span>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 3: THE MEDALLION ARCHITECTURE                           -->
+<!-- ============================================================ -->
+<section class="slide page-slide" aria-label="The Medallion Architecture">
+  <div class="page-header">
+    <h2>The Medallion Architecture &mdash; What We're Building</h2>
+    <span class="track-badge">Block A: How to Think</span>
+  </div>
+  <div class="page-content">
+    <div class="pipeline-flow" style="margin: 20px 0;">
+      <div class="stage bronze" style="min-width: 200px;">Bronze<br><span style="font-size:0.78rem;font-weight:400">Raw Ingestion</span></div>
+      <span class="arrow">&rarr;</span>
+      <div class="stage silver" style="min-width: 200px;">Silver<br><span style="font-size:0.78rem;font-weight:400">Cleaned &amp; Enriched</span></div>
+      <span class="arrow">&rarr;</span>
+      <div class="stage gold" style="min-width: 200px;">Gold<br><span style="font-size:0.78rem;font-weight:400">Analytics-Ready</span></div>
+    </div>
+
+    <div class="three-col">
+      <div>
+        <h3 style="color: #CD7F32;">Bronze (Raw)</h3>
+        <ul>
+          <li>Ingest data as-is from APIs and files</li>
+          <li>No transformations applied</li>
+          <li>Preserves original column names and types</li>
+          <li>Acts as an immutable audit trail</li>
+          <li>Use <code style="color:#CD7F32">@dp.table</code> with data quality expectations</li>
+        </ul>
+      </div>
+      <div>
+        <h3 style="color: #808080;">Silver (Cleaned)</h3>
+        <ul>
+          <li>Decode codes to readable names</li>
+          <li>Handle nulls and invalid rows</li>
+          <li>Standardize date formats and types</li>
+          <li>Rename columns to snake_case</li>
+          <li>Use <code style="color:#808080">@dp.table</code> reading from bronze</li>
+        </ul>
+      </div>
+      <div>
+        <h3 style="color: #B8860B;">Gold (Aggregated)</h3>
+        <ul>
+          <li>Roll up and aggregate metrics</li>
+          <li>Join across data sources</li>
+          <li>Calculate KPIs (YoY growth, rolling averages)</li>
+          <li>Ready for Genie and AI/BI dashboards</li>
+          <li>Use <code style="color:#B8860B">@dp.materialized_view</code></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="tip-box"><strong>Why medallion?</strong> Separation of concerns. Each layer has one job. Bugs are easy to trace. Silver and gold can be rebuilt from bronze at any time.</div>
+  </div>
+  <div class="page-footer">
+    <span>Coles Vibe Coding Workshop</span>
+    <span>Page 3</span>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 4: CLAUDE.MD — YOUR TEAM'S OPERATING MANUAL             -->
+<!-- ============================================================ -->
+<section class="slide page-slide" aria-label="CLAUDE.md — Your Team's Operating Manual">
+  <div class="page-header">
+    <h2>CLAUDE.md &mdash; Your Team's Operating Manual</h2>
+    <span class="track-badge">Block A: How to Think</span>
+  </div>
+  <div class="page-content">
+    <p>CLAUDE.md is a <strong>persistent instruction file</strong> that encodes your team's standards. The agent reads it automatically at the start of every session &mdash; no need to repeat yourself. You don't write it by hand &mdash; tell Claude about your project and it creates the CLAUDE.md for you.</p>
+
+    <h3>Three Scope Levels</h3>
+    <div class="three-col">
+      <div class="concept-card">
+        <h4>1. User-Level</h4>
+        <p><code style="font-size:0.72rem">~/.claude/CLAUDE.md</code></p>
+        <p>Personal preferences, coding style, editor habits. Applies to all your projects.</p>
+      </div>
+      <div class="concept-card">
+        <h4>2. Repo-Level</h4>
+        <p><code style="font-size:0.72rem">./CLAUDE.md</code></p>
+        <p>Team standards, tech stack, architecture decisions. Overrides user-level. Checked into git.</p>
+      </div>
+      <div class="concept-card">
+        <h4>3. Module-Level</h4>
+        <p><code style="font-size:0.72rem">./src/CLAUDE.md</code></p>
+        <p>Module-specific rules (e.g., "all files here use <code style="font-size:0.72rem">@dp.table</code>"). Overrides repo-level.</p>
+      </div>
+    </div>
+
+    <h3>Why It Works</h3>
+    <div class="two-col">
+      <ul>
+        <li><strong>Self-correcting:</strong> Agent re-reads it each session &mdash; no drift</li>
+        <li><strong>Searchable:</strong> Agent can reference specific sections on demand</li>
+      </ul>
+      <ul>
+        <li><strong>Maintainable:</strong> One file to update, entire team benefits</li>
+        <li><strong>Scoped:</strong> Different rules for different parts of the codebase</li>
+      </ul>
+    </div>
+  </div>
+  <div class="page-footer">
+    <span>Coles Vibe Coding Workshop</span>
+    <span>Page 4</span>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 5: CLAUDE.MD — WHAT TO INCLUDE                          -->
+<!-- ============================================================ -->
+<section class="slide page-slide" aria-label="CLAUDE.md — What to Include">
+  <div class="page-header">
+    <h2>CLAUDE.md &mdash; What to Include</h2>
+    <span class="track-badge">Block A: How to Think</span>
+  </div>
+  <div class="page-content">
+    <div class="two-col">
+      <div>
+        <h3>Template Structure</h3>
+        <div class="code-block" style="font-size:0.72rem"><span class="comment"># CLAUDE.md &mdash; Grocery Intelligence Platform</span>
+
+<span class="keyword">## Team</span>
+- Team Name: TEAM_NAME
+- Schema: workshop_vibe_coding.TEAM_SCHEMA
+
+<span class="keyword">## Project</span>
+A data platform that ingests Australian retail
+and food price data through a medallion architecture.
+
+<span class="keyword">## Tech Stack</span>
+- Data processing: PySpark (never pandas)
+- Pipeline: Lakeflow Declarative Pipelines
+- Web backend: FastAPI with Pydantic models
+- Deployment: Databricks Asset Bundles
+
+<span class="keyword">## Data Standards</span>
+- Architecture: Bronze &rarr; Silver &rarr; Gold
+- Date columns: YYYY-MM-DD, stored as DATE
+- Naming: snake_case for all tables/columns
+
+<span class="keyword">## Rules</span>
+- Always use PySpark, never pandas
+- Write tests BEFORE implementation
+- Keep solutions minimal
+
+<span class="keyword">## Project Structure</span>
+<span class="comment">(directory tree)</span>
+
+<span class="keyword">## Data Sources</span>
+<span class="comment">(table with API endpoints)</span>
+
+<span class="keyword">## Code Mappings</span>
+<span class="comment">(region codes, industry codes)</span></div>
+      </div>
+      <div>
+        <h3>Tips for Effective CLAUDE.md</h3>
+        <div class="tip-box"><strong>Keep it lean:</strong> Aim for ~50 lines. CLAUDE.md consumes context tokens &mdash; every line counts.</div>
+        <div class="tip-box"><strong>Be specific:</strong> "Always PySpark, never pandas" beats "Use appropriate tools." Concrete rules get followed.</div>
+        <div class="tip-box"><strong>Include code mappings:</strong> Region codes, industry codes, enum values &mdash; anything the agent needs for lookups.</div>
+
+        <div class="warning-box"><strong>Don't dump everything in.</strong> CLAUDE.md is not documentation. It's a set of standing orders. If a rule isn't referenced often, it belongs in a separate doc the agent can read on demand.</div>
+
+        <h3 style="margin-top: 14px;">What NOT to Include</h3>
+        <ul>
+          <li>Long explanations or tutorials</li>
+          <li>Full API documentation (link to it instead)</li>
+          <li>Implementation details that change frequently</li>
+          <li>Anything already in your test suite</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="page-footer">
+    <span>Coles Vibe Coding Workshop</span>
+    <span>Page 5</span>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 6: THE BDD LOOP + WHY IT WORKS                          -->
+<!-- ============================================================ -->
+<section class="slide page-slide" aria-label="The BDD Loop">
+  <div class="page-header">
+    <h2>BDD + Agents &mdash; The Loop &amp; Why It Works</h2>
+    <span class="track-badge">Block A: How to Think</span>
+  </div>
+  <div class="page-content">
+    <div class="loop-diagram">
+      <div class="loop-step human"><span style="font-size:0.72rem;display:block;opacity:0.8">STEP 1</span>Human writes<br>the test</div>
+      <span class="loop-arrow">&rarr;</span>
+      <div class="loop-step agent"><span style="font-size:0.72rem;display:block;opacity:0.8">STEP 2</span>Agent implements<br>code to pass</div>
+      <span class="loop-arrow">&rarr;</span>
+      <div class="loop-step agent"><span style="font-size:0.72rem;display:block;opacity:0.8">STEP 3</span>Run &amp; iterate<br>(agent self-corrects)</div>
+      <span class="loop-arrow">&rarr;</span>
+      <div class="loop-step human"><span style="font-size:0.72rem;display:block;opacity:0.8">STEP 4</span>Human reviews<br>&amp; accepts</div>
+    </div>
+
+    <div class="insight-box">The Test IS the Spec. Unlike prose specs, a test is executable, unambiguous, and either passes or fails.</div>
+
+    <div class="two-col" style="margin-top: 12px;">
+      <div>
+        <h3>Why This Works</h3>
+        <div class="concept-card" style="margin-bottom: 8px;">
+          <h4><span class="step-num">1</span> Agent Writes, You Read</h4>
+          <p>The agent writes the test code, but because it's Given/When/Then, you can read it back. You verify the test captured what you meant. No room for "I thought you meant..."</p>
+        </div>
+        <div class="concept-card" style="margin-bottom: 8px;">
+          <h4><span class="step-num">2</span> Self-Correcting Loop</h4>
+          <p>The agent reads failure messages, understands what went wrong, and fixes automatically. No waiting for human review on each iteration.</p>
+        </div>
+      </div>
+      <div>
+        <div class="concept-card" style="margin-bottom: 8px;">
+          <h4><span class="step-num">3</span> Guardrails</h4>
+          <p>Existing passing tests prevent the agent from rewriting working code. New code must pass new tests <em>without</em> breaking old ones.</p>
+        </div>
+        <div class="concept-card" style="margin-bottom: 8px;">
+          <h4><span class="step-num">4</span> Ratchet Effect</h4>
+          <p>Each passing test constrains the next implementation. Quality only goes up, never down. Every green test is permanent progress.</p>
+        </div>
+        <div class="tip-box"><strong>If you take one thing from today:</strong> write the tests first. Always.</div>
+      </div>
+    </div>
+
+    <div class="warning-box"><strong>Tip:</strong> Always use SEPARATE prompts for tests and implementation. If the same prompt writes both, Claude may write tests that match its code rather than your requirements.</div>
+  </div>
+  <div class="page-footer">
+    <span>Coles Vibe Coding Workshop</span>
+    <span>Page 6</span>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 7: CONTEXT WINDOWS                                      -->
+<!-- ============================================================ -->
+<section class="slide page-slide" aria-label="Context Windows">
+  <div class="page-header">
+    <h2>Context Windows &mdash; Your Agent's RAM</h2>
+    <span class="track-badge">Block A: How to Think</span>
+  </div>
+  <div class="page-content">
+    <div class="two-col">
+      <div>
+        <h3>What Are Tokens?</h3>
+        <p>A <strong>token</strong> is the basic unit of text for an LLM &mdash; roughly 3/4 of a word. Everything the agent reads and writes is measured in tokens.</p>
+        <div style="margin: 12px 0;">
+          <div class="scale-bar">
+            <span class="bar-label">200-line Python file</span>
+            <div class="bar" style="width: 40px;"></div>
+            <span class="bar-value">~2,500 tokens</span>
+          </div>
+          <div class="scale-bar">
+            <span class="bar-label">Your CLAUDE.md (~50 lines)</span>
+            <div class="bar" style="width: 15px;"></div>
+            <span class="bar-value">~500 tokens</span>
+          </div>
+          <div class="scale-bar">
+            <span class="bar-label">Claude's context window</span>
+            <div class="bar" style="width: 55px; background: var(--db-green);"></div>
+            <span class="bar-value">200,000 tokens</span>
+          </div>
+        </div>
+        <div class="insight-box">Context window = RAM. When it fills up, older context gets evicted and the agent may forget earlier decisions.</div>
+      </div>
+      <div>
+        <h3>Four Strategies</h3>
+        <div class="concept-card" style="margin-bottom: 8px;">
+          <h4><span class="step-num">1</span> Keep CLAUDE.md Lean</h4>
+          <p>~50 lines. Every line consumes tokens every session. Put verbose docs elsewhere.</p>
+        </div>
+        <div class="concept-card" style="margin-bottom: 8px;">
+          <h4><span class="step-num">2</span> Be Specific</h4>
+          <p>"Fix the test in test_pipeline.py::test_silver" not "write some code." Target files, not vague asks.</p>
+        </div>
+        <div class="concept-card" style="margin-bottom: 8px;">
+          <h4><span class="step-num">3</span> Plan Before Building</h4>
+          <p>Use <code>/plan</code> mode. Alignment upfront prevents expensive rework that wastes context.</p>
+        </div>
+        <div class="concept-card">
+          <h4><span class="step-num">4</span> New Sessions for New Tasks</h4>
+          <p>Context is RAM. When switching tasks, start fresh with <code>/clear</code> or a new session.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="page-footer">
+    <span>Coles Vibe Coding Workshop</span>
+    <span>Page 7</span>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- BLOCK B: "LAB 0 — HANDS-ON TOGETHER" (PRACTICAL, GUIDED)     -->
+<!-- ============================================================ -->
+
+<!-- ============================================================ -->
+<!-- SLIDE 8: LAB 0 DIVIDER                                        -->
+<!-- ============================================================ -->
+<section class="slide divider-slide dark-bg texture-noise" aria-label="Lab 0 Divider">
+  <div class="divider-number">0</div>
+  <h1>Lab 0: Guided Hands-On</h1>
+  <p class="divider-subtitle">Initialize your project &middot; Write your first test &middot; Build bronze ingest</p>
+  <div class="divider-time">10:45 AM / 45 Minutes</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 9: RULE #1 — JUST SAY WHAT YOU WANT (LAB 0 — 10 MIN)   -->
+<!-- ============================================================ -->
+<section class="slide page-slide" aria-label="Rule #1: Just Say What You Want">
+  <div class="page-header">
+    <h2>Lab 0: Just Say What You Want <span class="time-badge">10 min</span></h2>
+    <span class="track-badge">Lab 0: Hands-On</span>
+  </div>
+  <div class="page-content">
+    <p>Don't write a file &mdash; have a conversation. Open your Coding Agents terminal and tell Claude about your project. Replace <code>&lt;team_schema&gt;</code> with your assigned schema name.</p>
+
+    <div class="prompt-block">I'm building a grocery intelligence platform on Databricks.
+
+Tech stack: PySpark, Lakeflow Declarative Pipelines, FastAPI + React,
+Databricks Asset Bundles (DABs).
+
+Data sources: ABS SDMX APIs, FSANZ web scraping, ACCC PDF ingestion
+via UC Volumes.
+
+Unity Catalog namespace: workshop_vibe_coding.&lt;team_schema&gt;.
+
+Set up the project and create a CLAUDE.md.</div>
+
+    <div class="insight-box">This is Rule #1 of vibe coding: you literally type what you want and it happens. You don't hand-write config files &mdash; you engineer the harness through conversation.</div>
+
+    <div class="tip-box"><strong>After Claude responds:</strong> Want to change something? Just say it. &ldquo;Add a rule that we always use PySpark, never pandas.&rdquo; &ldquo;Add our team angle: Retail Performance.&rdquo; That's agentic engineering &mdash; you direct, it implements.</div>
+  </div>
+  <div class="page-footer">
+    <span>Coles Vibe Coding Workshop</span>
+    <span>Page 9</span>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 10: WRITING YOUR FIRST TEST (LAB 0 — 10 MIN)           -->
+<!-- ============================================================ -->
+<section class="slide page-slide" aria-label="Writing Your First Test">
+  <div class="page-header">
+    <h2>Lab 0: Write Your First Test <span class="time-badge">10 min</span></h2>
+    <span class="track-badge">Lab 0: Hands-On</span>
+  </div>
+  <div class="page-content">
+    <div class="two-col">
+      <div>
+        <h3>Given &mdash; When &mdash; Then</h3>
+        <div class="code-block"><span class="keyword">def</span> <span class="function">test_bronze_ingest_retail</span>(spark):
+    <span class="comment"># GIVEN: Raw ABS retail trade data</span>
+    raw_data = spark.createDataFrame([
+        (<span class="string">"2024-01-15"</span>, <span class="type">1000</span>, <span class="string">"NSW"</span>),
+        (<span class="string">"2024-01-16"</span>, <span class="type">None</span>, <span class="string">"VIC"</span>),
+        (<span class="string">"invalid"</span>,    <span class="type">2000</span>, <span class="string">"QLD"</span>),
+        (<span class="string">"2024-01-17"</span>, <span class="type">1500</span>, <span class="string">"NSW"</span>),
+        (<span class="string">"2024-01-18"</span>, <span class="type">900</span>,  <span class="string">"VIC"</span>),
+        (<span class="string">"2024-01-19"</span>, <span class="type">1100</span>, <span class="string">"QLD"</span>),
+        (<span class="string">"2024-01-20"</span>, <span class="type">1300</span>, <span class="string">"NSW"</span>),
+        (<span class="string">"2024-01-21"</span>, <span class="type">None</span>, <span class="string">"SA"</span>),
+        (<span class="string">"2024-01-22"</span>, <span class="type">800</span>,  <span class="string">"WA"</span>),
+        (<span class="string">"2024-01-23"</span>, <span class="type">1200</span>, <span class="string">"TAS"</span>),
+    ], [<span class="string">"date"</span>, <span class="string">"price"</span>, <span class="string">"state"</span>])
+
+    <span class="comment"># WHEN: Clean function applied</span>
+    result = clean_transactions(raw_data)
+
+    <span class="comment"># THEN: Invalid rows removed</span>
+    <span class="keyword">assert</span> result.count() == <span class="type">8</span>
+    <span class="keyword">assert</span> result.filter(
+        <span class="string">"price IS NULL"</span>
+    ).count() == <span class="type">0</span></div>
+      </div>
+      <div>
+        <h3>Key Principles</h3>
+        <div class="concept-card" style="margin-bottom: 10px;">
+          <h4>Concrete Values</h4>
+          <p>Use real data: actual state codes, valid dates, realistic dollar amounts. Not mocks or abstract placeholders.</p>
+        </div>
+        <div class="concept-card" style="margin-bottom: 10px;">
+          <h4>Small Datasets</h4>
+          <p>5-10 rows per test. Enough to cover happy path + edge cases. Easy to reason about.</p>
+        </div>
+        <div class="concept-card" style="margin-bottom: 10px;">
+          <h4>Descriptive Names</h4>
+          <p><code style="font-size:0.72rem">test_bronze_ingest_retail</code> not <code style="font-size:0.72rem">test_transform</code>. The name tells the agent what to build.</p>
+        </div>
+        <div class="concept-card">
+          <h4>Multiple Assertions</h4>
+          <p>Check row count, column names, specific values, and null handling. Each assertion is a constraint.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="page-footer">
+    <span>Coles Vibe Coding Workshop</span>
+    <span>Page 10</span>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 11: BUILDING BRONZE INGEST (LAB 0 — 20 MIN)            -->
+<!-- ============================================================ -->
+<section class="slide page-slide" aria-label="Building Bronze Ingest">
+  <div class="page-header">
+    <h2>Lab 0: Build Bronze Ingest <span class="time-badge">20 min</span></h2>
+    <span class="track-badge">Lab 0: Hands-On</span>
+  </div>
+  <div class="page-content">
+    <p>Now let the agent build the implementation to pass your test. Paste the prompt below into Claude Code.</p>
+
+    <div class="prompt-block">Read CLAUDE.md and tests/test_pipeline.py. Implement the bronze
+ingest function in src/bronze/ to make the failing test pass.
+
+Rules:
+- Use PySpark, not pandas
+- Use @dp.table decorator for Lakeflow Declarative Pipelines
+- Read data from the ABS Retail Trade SDMX API
+- Store raw data with original column names
+- Add _ingested_at timestamp column
+- Run pytest tests/test_pipeline.py -k "bronze" -x after implementation</div>
+
+    <div class="two-col" style="margin-top: 14px;">
+      <div>
+        <h3>What to Watch For</h3>
+        <ul>
+          <li><strong>Does the agent read CLAUDE.md first?</strong> If not, tell it: "Read CLAUDE.md first, then try again."</li>
+          <li><strong>Does it use PySpark?</strong> If it reaches for pandas, steer it back.</li>
+          <li><strong>Does it run the test?</strong> The agent should run pytest automatically and iterate until green.</li>
+          <li><strong>Does the agent run the tests automatically after implementation?</strong> If not, tell it: "Run pytest tests/test_pipeline.py -k bronze -x and show me the output."</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Expected Outcome</h3>
+        <div class="success-box">
+          <h4>After ~15 minutes you should see:</h4>
+          <ul class="checklist">
+            <li><code style="font-size:0.72rem">src/bronze/ingest.py</code> &mdash; Bronze ingest function</li>
+            <li><code style="font-size:0.72rem">tests/test_pipeline.py</code> &mdash; Passing bronze test</li>
+            <li>pytest output showing green</li>
+          </ul>
+        </div>
+        <div class="tip-box"><strong>Stuck?</strong> Tell the agent: "Read the test failure message carefully and fix only the failing assertion."</div>
+      </div>
+    </div>
+  </div>
+  <div class="page-footer">
+    <span>Coles Vibe Coding Workshop</span>
+    <span>Page 11</span>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 12: LAB 0 CHECKPOINT (5 MIN)                            -->
+<!-- ============================================================ -->
+<section class="slide page-slide" aria-label="Lab 0 Checkpoint">
+  <div class="page-header">
+    <h2>Lab 0: Checkpoint <span class="time-badge">5 min</span></h2>
+    <span class="track-badge">Lab 0: Hands-On</span>
+  </div>
+  <div class="page-content">
+    <div class="checkpoint-box">
+      <strong>Before moving on, verify your team has all three pieces in place:</strong>
+    </div>
+
+    <div class="three-col" style="margin-top: 16px;">
+      <div class="success-box">
+        <h4>1. CLAUDE.md</h4>
+        <ul class="checklist" style="font-size: 1.05rem;">
+          <li>Team name and schema present</li>
+          <li>Tech stack with PySpark constraint</li>
+          <li>Data standards section</li>
+          <li>Rules section (BDD, minimal)</li>
+          <li>Project structure defined</li>
+          <li><strong>Verify:</strong> Agent can read it back and list the rules</li>
+        </ul>
+      </div>
+      <div class="success-box">
+        <h4>2. Passing Test</h4>
+        <ul class="checklist" style="font-size: 1.05rem;">
+          <li>Test uses Given-When-Then structure</li>
+          <li>Concrete values (real state codes, dates)</li>
+          <li>Multiple assertions (count, nulls)</li>
+          <li>Descriptive test name</li>
+          <li><code style="font-size:0.72rem">pytest -k "bronze" -x</code> passes</li>
+          <li><strong>Verify:</strong> pytest output shows green &mdash; not just "I think it passes"</li>
+        </ul>
+      </div>
+      <div class="success-box">
+        <h4>3. Bronze Ingest</h4>
+        <ul class="checklist" style="font-size: 1.05rem;">
+          <li>Uses PySpark (not pandas)</li>
+          <li>Has @dp.table decorator</li>
+          <li>Reads from data source</li>
+          <li>Adds _ingested_at timestamp</li>
+          <li>All bronze tests green</li>
+          <li><strong>Verify:</strong> Run <code style="font-size:0.72rem">databricks bundle validate</code> to verify pipeline config</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="warning-box" style="margin-top: 16px;"><strong>Falling behind?</strong> No shame in using checkpoints. Tell the agent: "Copy the checkpoint tables from <code style="font-size:0.72rem">workshop_vibe_coding.checkpoints</code> into my schema <code style="font-size:0.72rem">workshop_vibe_coding.&lt;team_schema&gt;</code>"</div>
+
+    <div class="insight-box" style="margin-top: 12px;">You've just completed the full BDD cycle: spec (CLAUDE.md) &rarr; feature &rarr; steps &rarr; green. This is the pattern for the rest of the day.</div>
+  </div>
+  <div class="page-footer">
+    <span>Coles Vibe Coding Workshop</span>
+    <span>Page 12</span>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- BLOCK C: "TOOLS FOR THE LABS" (THEORY BEFORE TRACK SPLIT)     -->
+<!-- ============================================================ -->
+
+<!-- ============================================================ -->
+<!-- SLIDE 13: DIVIDER — SKILLS, MCP & BEYOND                     -->
+<!-- ============================================================ -->
+<section class="slide divider-slide dark-bg texture-noise" aria-label="Skills MCP Beyond Divider">
+  <h1>Skills, MCP &amp; Beyond</h1>
+  <p class="divider-subtitle">Extending agents from code generators to system operators</p>
+  <div class="divider-time">Reference for Lab 1 (12:00 PM) &amp; Lab 2 (2:00 PM)</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 14: SKILLS — SLASH COMMANDS FOR AGENTS                  -->
+<!-- ============================================================ -->
+<section class="slide page-slide" aria-label="Skills — Slash Commands for Agents">
+  <div class="page-header">
+    <h2>Skills &mdash; Slash Commands for Agents</h2>
+    <span class="track-badge">Block C: Tools</span>
+  </div>
+  <div class="page-content">
+    <p>Skills are <strong>curated markdown files</strong> triggered by slash commands. Remember Rule #1: you said something useful, so you save it. A skill is just that &mdash; instructions you don't want to repeat, saved as markdown.</p>
+
+    <div class="two-col">
+      <div>
+        <h3>How Skills Work</h3>
+        <p>A skill is a Markdown file that defines a multi-step workflow. When you type <code>/commit</code>, the agent:</p>
+        <ol>
+          <li>Reads git status and diff</li>
+          <li>Analyzes changes and drafts a commit message</li>
+          <li>Stages files and creates the commit</li>
+          <li>Runs git status to verify success</li>
+        </ol>
+
+        <h3 style="margin-top: 12px;">Built-In Examples</h3>
+        <div class="code-block" style="font-size: 0.88rem;"><span class="comment"># Common skills</span>
+<span class="function">/commit</span>     <span class="comment"># Smart git commit with message</span>
+<span class="function">/review-pr</span>  <span class="comment"># Review a pull request</span>
+<span class="function">/test</span>       <span class="comment"># Run tests intelligently</span>
+
+<span class="comment"># Custom skills you can create</span>
+<span class="function">/deploy-dab</span> <span class="comment"># Validate + deploy DABs bundle</span>
+<span class="function">/check-data</span> <span class="comment"># Query tables, verify counts</span></div>
+      </div>
+      <div>
+        <h3>Why Skills Matter</h3>
+        <div class="concept-card" style="margin-bottom: 8px;">
+          <h4>Automate Repetitive Patterns</h4>
+          <p>Workflows you do 10x/day become one command. No re-explaining each time.</p>
+        </div>
+        <div class="concept-card" style="margin-bottom: 8px;">
+          <h4>Encode Team Conventions</h4>
+          <p>Your team's commit message format, deploy steps, and review checklist &mdash; codified once, used by everyone.</p>
+        </div>
+        <div class="concept-card">
+          <h4>Reduce Context Usage</h4>
+          <p>A skill runs a pre-defined workflow without you needing to type out multi-step instructions each time.</p>
+        </div>
+
+        <div class="tip-box"><strong>Workshop tip:</strong> You can create custom skills during the labs. Think about which multi-step workflows you repeat most often.</div>
+    <div class="insight-box">How powerful is a markdown skill? <a href="https://deathbyclawd.com/" target="_blank">deathbyclawd.com</a> scans which SaaS products can be replaced by one.</div>
+      </div>
+    </div>
+  </div>
+  <div class="page-footer">
+    <span>Coles Vibe Coding Workshop</span>
+    <span>Page 14</span>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 15: MCP — USB-C FOR AI                                  -->
+<!-- ============================================================ -->
+<section class="slide page-slide" aria-label="MCP — USB-C for AI">
+  <div class="page-header">
+    <h2>MCP &mdash; "USB-C for AI"</h2>
+    <span class="track-badge">Block C: Tools</span>
+  </div>
+  <div class="page-content">
+    <p><strong>Model Context Protocol (MCP)</strong> is a standard protocol for connecting AI agents to external tools and data sources. One protocol, every tool connects &mdash; like USB-C for AI.</p>
+
+    <div class="mcp-diagram">
+      <div class="mcp-node mcp-agent">Claude Agent</div>
+      <div class="mcp-arrow">&harr;</div>
+      <div class="mcp-node mcp-protocol">MCP Protocol</div>
+      <div class="mcp-arrow">&harr;</div>
+      <div class="mcp-node mcp-tools">Any Tool</div>
+    </div>
+
+    <h3>Three Types of MCP Servers</h3>
+    <div class="three-col" style="margin-top: 10px;">
+      <div class="mcp-card managed">
+        <div class="card-icon">&#x1f3e0;</div>
+        <h4>Managed (Built-In)</h4>
+        <div class="card-subtitle">Zero config &mdash; pre-integrated with Databricks</div>
+        <ul>
+          <li>Unity Catalog tables &amp; volumes</li>
+          <li>Vector Search indexes</li>
+          <li>Genie spaces (NL &rarr; SQL)</li>
+          <li>DBSQL warehouses</li>
+        </ul>
+      </div>
+      <div class="mcp-card external">
+        <div class="card-icon">&#x1f50c;</div>
+        <h4>External (via Proxies)</h4>
+        <div class="card-subtitle">Community &amp; vendor integrations</div>
+        <ul>
+          <li>GitHub (PRs, issues, repos)</li>
+          <li>Slack (messages, channels)</li>
+          <li>Glean (internal search)</li>
+          <li>JIRA (tickets, sprints)</li>
+          <li>Databricks Docs</li>
+        </ul>
+      </div>
+      <div class="mcp-card custom">
+        <div class="card-icon">&#x1f527;</div>
+        <h4>Custom (Org-Specific)</h4>
+        <div class="card-subtitle">Build your own for internal tools</div>
+        <ul>
+          <li>Wrap internal REST APIs</li>
+          <li>Data quality workflows</li>
+          <li>Monitoring &amp; alerting</li>
+          <li>Host on Databricks Apps</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="tip-box" style="margin-top: 14px;"><strong>Key benefit:</strong> Agents access ANY tool through a standard protocol. Credentials stay secure in Unity Catalog &mdash; the agent never sees raw tokens or passwords.</div>
+  </div>
+  <div class="page-footer">
+    <span>Coles Vibe Coding Workshop</span>
+    <span>Page 15</span>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 16: GENIE & AI/BI DASHBOARDS                            -->
+<!-- ============================================================ -->
+<section class="slide page-slide" aria-label="Genie and AI/BI Dashboards">
+  <div class="page-header">
+    <h2>Genie &amp; AI/BI Dashboards</h2>
+    <span class="track-badge">Block C: Tools</span>
+  </div>
+  <div class="page-content">
+    <div class="two-col">
+      <div>
+        <h3>Genie: Natural Language on Your Data</h3>
+        <p>Business users ask questions in plain English. Genie generates SQL, runs it, and returns results with visualizations.</p>
+        <div class="code-block" style="font-size: 0.88rem;"><span class="comment"># User asks:</span>
+<span class="string">"Which state had the highest food retail
+ turnover in 2024?"</span>
+
+<span class="comment"># Genie generates:</span>
+<span class="keyword">SELECT</span> state,
+       <span class="function">SUM</span>(turnover_millions) <span class="keyword">AS</span> total
+<span class="keyword">FROM</span> gold.retail_summary
+<span class="keyword">WHERE</span> year = <span class="type">2024</span>
+<span class="keyword">GROUP BY</span> state
+<span class="keyword">ORDER BY</span> total <span class="keyword">DESC</span>
+<span class="keyword">LIMIT</span> <span class="type">1</span></div>
+        <p><strong>How to set up:</strong> Point Genie at your gold tables, add column descriptions, and provide example queries in the instructions.</p>
+      </div>
+      <div>
+        <h3>AI/BI Dashboards</h3>
+        <p>Auto-generated dashboards that understand your data. Describe a visualization in natural language and it generates the chart.</p>
+        <ul>
+          <li>"Show monthly revenue by state as a line chart"</li>
+          <li>"Compare food CPI across states as a bar chart"</li>
+          <li>"Display year-over-year growth as a heatmap"</li>
+        </ul>
+        <div class="tip-box"><strong>How they complement each other:</strong><br>
+        <strong>Dashboards</strong> = recurring views, standard KPIs, shared with stakeholders<br>
+        <strong>Genie</strong> = ad-hoc questions, exploration, self-serve analytics</div>
+        <p style="margin-top: 8px;">Both feed from the same <strong>gold tables</strong> &mdash; the output of your data pipeline. Good gold tables = good Genie + dashboards.</p>
+      </div>
+    </div>
+  </div>
+  <div class="page-footer">
+    <span>Coles Vibe Coding Workshop</span>
+    <span>Page 16</span>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- BLOCK D: "REFERENCE" (CHEAT SHEET)                            -->
+<!-- ============================================================ -->
+
+<!-- ============================================================ -->
+<!-- SLIDE 17: VALIDATION — PROVING THE WORK IS DONE               -->
+<!-- ============================================================ -->
+<section class="slide page-slide" aria-label="Validation — Proving the Work is Done">
+  <div class="page-header">
+    <h2>Validation &mdash; Proving the Work is Done</h2>
+    <span class="track-badge">Block D: Reference</span>
+  </div>
+  <div class="page-content">
+    <div class="two-col">
+      <div>
+        <h3>The Core Principle</h3>
+        <div class="big-quote">
+          "Include tests, screenshots, or expected outputs so Claude can check itself."
+          <span class="attribution">&mdash; Anthropic</span>
+        </div>
+        <p style="margin-top: 12px;">There's a difference between an agent that <strong>thinks</strong> it did the work and one that <strong>proves</strong> it did. "I implemented the function" is not proof. A green test suite is.</p>
+        <div class="insight-box" style="margin-top: 12px;">Every prompt should answer: "How will the agent verify this worked?"</div>
+      </div>
+      <div>
+        <h3>Six Validation Patterns</h3>
+        <ol style="font-size: 1.05rem; line-height: 1.65; margin-left: 20px;">
+          <li style="margin-bottom: 6px;"><strong>BDD Gate</strong> &mdash; scenarios fail &rarr; implement steps &rarr; behave passes (binary proof)</li>
+          <li style="margin-bottom: 6px;"><strong>Separate prompts</strong> &mdash; write tests in one prompt, implement in another (prevents gaming)</li>
+          <li style="margin-bottom: 6px;"><strong>@dp.expect</strong> &mdash; data quality expectations built into pipeline code (automatic)</li>
+          <li style="margin-bottom: 6px;"><strong>Schema contracts</strong> &mdash; test exact response keys, types, and value ranges (not just status 200)</li>
+          <li style="margin-bottom: 6px;"><strong>Full suite regression</strong> &mdash; <code style="font-size:0.82rem">pytest tests/ -x</code> after every change (the ratchet)</li>
+          <li style="margin-bottom: 6px;"><strong>Negative testing</strong> &mdash; prove error handling works with invalid inputs</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+  <div class="page-footer">
+    <span>Coles Vibe Coding Workshop</span>
+    <span>Page 17</span>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 18: STEERING YOUR AGENT (MERGED PITFALLS + PHRASES)     -->
+<!-- ============================================================ -->
+<section class="slide page-slide" aria-label="Steering Your Agent">
+  <div class="page-header">
+    <h2>Steering Your Agent &mdash; Pitfalls &amp; Phrases</h2>
+    <span class="track-badge">Block D: Reference</span>
+  </div>
+  <div class="page-content">
+    <div class="two-col">
+      <div>
+        <h3>Common Pitfalls &amp; Fixes</h3>
+        <div class="concept-card" style="margin-bottom: 8px;">
+          <h4>Overengineering</h4>
+          <p><strong>Symptom:</strong> Asked for one function, got an entire module with abstract base classes.</p>
+          <p><strong>Fix:</strong> "Keep it minimal. One function, not a framework. No extra features."</p>
+        </div>
+        <div class="concept-card" style="margin-bottom: 8px;">
+          <h4>Hallucinations</h4>
+          <p><strong>Symptom:</strong> Agent used a column name that doesn't exist in the data.</p>
+          <p><strong>Fix:</strong> "Never speculate about code you have not opened. Read the file first."</p>
+        </div>
+        <div class="concept-card">
+          <h4>Going Off-Rails</h4>
+          <p><strong>Symptom:</strong> Looked away for 5 minutes, agent rewrote half the project.</p>
+          <p><strong>Fix:</strong> Check in every 2-3 tool calls. "Don't change functions that already pass tests."</p>
+        </div>
+      </div>
+      <div>
+        <h3>Steering Phrases Cheatsheet</h3>
+        <table class="data-table" style="font-size: 1.05rem;">
+          <tr><th style="width:40%">When the agent...</th><th>Say this</th></tr>
+          <tr><td><strong>Uses pandas</strong></td><td>"Rewrite using PySpark. We never use pandas."</td></tr>
+          <tr><td><strong>Ignores CLAUDE.md</strong></td><td>"Read CLAUDE.md first, then try again."</td></tr>
+          <tr><td><strong>Rewrites working code</strong></td><td>"Don't change functions that already pass tests."</td></tr>
+          <tr><td><strong>Writes code before tests</strong></td><td>"Stop. Write the tests first, then implement."</td></tr>
+          <tr><td><strong>Too complex</strong></td><td>"Simplify. I just need [specific thing]."</td></tr>
+          <tr><td><strong>Stuck in a loop</strong></td><td>"Stop. Let's try a different approach."</td></tr>
+          <tr><td><strong>Speculates</strong></td><td>"Read the file first. Don't guess."</td></tr>
+          <tr><td><strong>Hasn't planned</strong></td><td>"Stop. Use /plan first. Interview me about what I need."</td></tr>
+          <tr><td><strong>Claims it works</strong></td><td>"Prove it. Show me the git diff. Grill me on these changes."</td></tr>
+          <tr><td><strong>First attempt is mediocre</strong></td><td>"Knowing everything you know now, scrap this and implement the elegant solution."</td></tr>
+        </table>
+
+        <div class="insight-box" style="margin-top: 10px;">Healthy cadence: Agent makes 2-3 tool calls &rarr; You review &rarr; Steer if needed &rarr; Continue</div>
+
+        <div class="tip-box" style="margin-top: 10px;"><strong>Commit as checkpoints:</strong> <code>/commit</code> every 15-20 minutes. Commits are your safety net. Esc-Esc cancels a runaway agent; <code>git checkout</code> reverts to your last good state.</div>
+      </div>
+    </div>
+  </div>
+  <div class="page-footer">
+    <span>Coles Vibe Coding Workshop</span>
+    <span>Page 18</span>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 19: WORKSHOP QUICK REFERENCE                            -->
+<!-- ============================================================ -->
+<section class="slide page-slide" aria-label="Workshop Quick Reference">
+  <div class="page-header">
+    <h2>Workshop Quick Reference</h2>
+    <span class="track-badge">Block D: Reference</span>
+  </div>
+  <div class="page-content">
+    <div class="two-col">
+      <div>
+        <h3>Key Commands</h3>
+        <div class="code-block" style="font-size: 0.88rem;"><span class="comment"># Check environment</span>
+databricks auth status
+claude --version
+
+<span class="comment"># Run tests (always use -x for fail-fast)</span>
+pytest tests/ -x
+pytest tests/test_pipeline.py -k <span class="string">"bronze"</span> -x
+pytest tests/test_pipeline.py -k <span class="string">"silver"</span> -x
+pytest tests/test_app.py -x
+
+<span class="comment"># Deploy with Databricks Asset Bundles</span>
+databricks bundle validate
+databricks bundle deploy -t dev
+databricks bundle run grocery-intelligence-TEAM -t dev
+
+<span class="comment"># Deploy web app</span>
+<span class="keyword">cd</span> app &amp;&amp; databricks apps deploy \
+  --name grocery-app-TEAM \
+  --source-code-path ./</div>
+      </div>
+      <div>
+        <h3>Key Files</h3>
+        <table class="data-table" style="font-size: 1.05rem;">
+          <tr><th>File</th><th>Purpose</th></tr>
+          <tr><td><code style="font-size:0.72rem">CLAUDE.md</code></td><td>Agent instructions (team standards)</td></tr>
+          <tr><td><code style="font-size:0.72rem">tests/conftest.py</code></td><td>PySpark test fixtures</td></tr>
+          <tr><td><code style="font-size:0.72rem">src/bronze/</code></td><td>Raw data ingestion</td></tr>
+          <tr><td><code style="font-size:0.72rem">src/silver/</code></td><td>Cleaned transformations</td></tr>
+          <tr><td><code style="font-size:0.72rem">src/gold/</code></td><td>Aggregated analytics</td></tr>
+          <tr><td><code style="font-size:0.72rem">app/app.py</code></td><td>FastAPI web application</td></tr>
+          <tr><td><code style="font-size:0.72rem">databricks.yml</code></td><td>DABs deployment config</td></tr>
+        </table>
+
+        <h3>Workshop Schedule</h3>
+        <table class="data-table" style="font-size: 1.05rem;">
+          <tr><th>Time</th><th>Session</th></tr>
+          <tr><td>9:30 AM</td><td>Block A: How to Think (theory)</td></tr>
+          <tr><td>10:45 AM</td><td>Lab 0: Guided Hands-On (all together)</td></tr>
+          <tr><td>11:30 AM</td><td>Block C: Tools for the Labs (theory)</td></tr>
+          <tr><td>12:00 PM</td><td>Lab 1: Track-specific lab</td></tr>
+          <tr><td>1:00 PM</td><td>Lunch break</td></tr>
+          <tr><td>2:00 PM</td><td>Lab 2: Track-specific lab</td></tr>
+          <tr><td>3:30 PM</td><td>Demos &amp; wrap-up</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="page-footer">
+    <span>Coles Vibe Coding Workshop</span>
+    <span>Page 19</span>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 20: KEY TAKEAWAYS                                       -->
+<!-- ============================================================ -->
+<section class="slide page-slide" aria-label="Key Takeaways">
+  <div class="page-header">
+    <h2>Key Takeaways</h2>
+    <span class="track-badge">Block D: Reference</span>
+  </div>
+  <div class="page-content">
+    <div class="success-box">
+      <h4>Success Criteria for Agentic Development</h4>
+      <ol style="font-size: 1.15rem; line-height: 1.7; margin-left: 24px;">
+        <li><strong>Write clear specs</strong> &mdash; CLAUDE.md, tests, and PRDs define what "done" looks like. The agent can only be as good as your specification.</li>
+        <li><strong>Use Gherkin as executable specs (BDD)</strong> &mdash; Scenarios are unambiguous. They pass or they fail. No interpretation required. Write them first, always.</li>
+        <li><strong>Every prompt needs a verification step</strong> &mdash; a test to run, a command to execute, or an output to check. If Claude can't prove it worked, it didn't.</li>
+        <li><strong>Manage context windows</strong> &mdash; Keep CLAUDE.md lean (~50 lines), be specific with requests, use new sessions for new tasks.</li>
+        <li><strong>Steer early and often</strong> &mdash; Review every 2-3 tool calls. Short feedback loops produce better results than long unsupervised runs.</li>
+      </ol>
+    </div>
+
+    <div class="insight-box" style="font-size: 1.15rem; margin-top: 20px;">Think of yourself as a director, not a typist.</div>
+
+    <div class="two-col" style="margin-top: 16px;">
+      <div class="tip-box"><strong>Monday morning action:</strong> Create a CLAUDE.md for your team's main repository. Start with tech stack, coding standards, and 5 rules. Iterate from there.</div>
+      <div class="tip-box"><strong>The discipline transfers:</strong> These practices work with Claude Code, Cursor, Windsurf, GitHub Copilot, and any agentic coding tool. The discipline is the differentiator, not the tool.</div>
+    </div>
+  </div>
+  <div class="page-footer">
+    <span>Coles Vibe Coding Workshop</span>
+    <span>Page 20</span>
+  </div>
+</section>
+
+<script>
+  class SlidePresentation {
+    constructor() {
+      this.slides = document.querySelectorAll('.slide');
+      this.progressBar = document.querySelector('.progress-bar');
+      this.navDots = document.querySelector('.nav-dots');
+      this.currentSlide = 0;
+      this.init();
+    }
+    init() {
+      this.createNavDots();
+      this.setupIntersectionObserver();
+      this.setupKeyboardNav();
+      this.setupTouchNav();
+      this.setupWheelNav();
+      this.updateProgress();
+    }
+    createNavDots() {
+      this.slides.forEach((_, i) => {
+        const dot = document.createElement('button');
+        dot.className = 'nav-dot' + (i === 0 ? ' active' : '');
+        dot.setAttribute('aria-label', `Go to slide ${i + 1}`);
+        dot.addEventListener('click', () => this.goToSlide(i));
+        this.navDots.appendChild(dot);
+      });
+    }
+    setupIntersectionObserver() {
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+            const index = [...this.slides].indexOf(entry.target);
+            this.currentSlide = index;
+            this.updateDots();
+            this.updateProgress();
+            this.animateCounters(entry.target);
+          }
+        });
+      }, { threshold: 0.5 });
+      this.slides.forEach(slide => observer.observe(slide));
+    }
+    animateCounters(slide) {
+      slide.querySelectorAll('.counter-value[data-target]:not(.counted)').forEach(el => {
+        el.classList.add('counted');
+        const target = parseInt(el.dataset.target);
+        const suffix = el.dataset.suffix || '';
+        const prefix = el.dataset.prefix || '';
+        const duration = 1500;
+        const start = performance.now();
+        const animate = (now) => {
+          const progress = Math.min((now - start) / duration, 1);
+          const eased = 1 - Math.pow(1 - progress, 3);
+          el.textContent = prefix + Math.round(target * eased).toLocaleString() + suffix;
+          if (progress < 1) requestAnimationFrame(animate);
+        };
+        requestAnimationFrame(animate);
+      });
+    }
+    setupKeyboardNav() {
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowDown' || e.key === 'ArrowRight' || e.key === ' ') {
+          e.preventDefault();
+          this.goToSlide(this.currentSlide + 1);
+        } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+          e.preventDefault();
+          this.goToSlide(this.currentSlide - 1);
+        }
+      });
+    }
+    setupTouchNav() {
+      let startY = 0;
+      document.addEventListener('touchstart', (e) => {
+        startY = e.touches[0].clientY;
+      }, { passive: true });
+      document.addEventListener('touchend', (e) => {
+        const diff = startY - e.changedTouches[0].clientY;
+        if (Math.abs(diff) > 50) {
+          this.goToSlide(this.currentSlide + (diff > 0 ? 1 : -1));
+        }
+      }, { passive: true });
+    }
+    setupWheelNav() {
+      let lastScroll = 0;
+      document.addEventListener('wheel', (e) => {
+        const now = Date.now();
+        if (now - lastScroll < 800) return;
+        lastScroll = now;
+        this.goToSlide(this.currentSlide + (e.deltaY > 0 ? 1 : -1));
+      }, { passive: true });
+    }
+    goToSlide(index) {
+      const target = Math.max(0, Math.min(index, this.slides.length - 1));
+      this.slides[target].scrollIntoView({ behavior: 'instant' });
+    }
+    updateDots() {
+      this.navDots.querySelectorAll('.nav-dot').forEach((dot, i) => {
+        dot.classList.toggle('active', i === this.currentSlide);
+      });
+    }
+    updateProgress() {
+      const pct = ((this.currentSlide + 1) / this.slides.length) * 100;
+      this.progressBar.style.width = pct + '%';
+      this.progressBar.setAttribute('aria-valuenow', Math.round(pct));
+    }
+  }
+  new SlidePresentation();
+</script>
+</body>
+</html>

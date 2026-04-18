@@ -1,0 +1,18 @@
+# Databricks bundle state
+.databricks/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+.uv/
+uv.lock
+
+# IDE
+.idea/
+.vscode/
+*.swp
+dist/
+*.egg-info/
+build/

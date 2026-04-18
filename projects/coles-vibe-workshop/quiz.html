@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Grocery Data Quiz — Coles Vibe Workshop</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --db-lava: #FF3621;
+      --db-lava-light: #FF5F46;
+      --db-navy: #1B3139;
+      --db-ink: #0B2026;
+      --db-teal: #1B5162;
+      --db-green: #00A972;
+      --db-oat: #F9F7F4;
+      --db-oat-medium: #EEEDE9;
+      --db-white: #FFFFFF;
+      --db-amber: #FEAB03;
+      --db-indigo: #4259FE;
+      --coles-red: #ED1C24;
+      --font-display: 'DM Sans', sans-serif;
+      --font-body: 'DM Sans', sans-serif;
+      --font-mono: 'DM Mono', monospace;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; overflow: hidden; }
+    body {
+      font-family: var(--font-body);
+      background: var(--db-ink);
+      color: white;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* === SCREENS === */
+    .screen { display: none; height: 100vh; flex-direction: column; align-items: center; justify-content: center; padding: 2rem; }
+    .screen.active { display: flex; }
+
+    /* === TITLE SCREEN === */
+    #title-screen {
+      background: linear-gradient(135deg, var(--db-navy) 0%, var(--db-ink) 100%);
+      text-align: center;
+      gap: 1.5rem;
+    }
+    #title-screen h1 {
+      font-family: var(--font-display);
+      font-size: clamp(3rem, 6vw, 6rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+    }
+    #title-screen .subtitle {
+      font-size: clamp(1.2rem, 2vw, 1.8rem);
+      color: rgba(255,255,255,0.6);
+      max-width: 600px;
+    }
+    .emoji-parade {
+      font-size: 3rem;
+      letter-spacing: 0.5rem;
+      animation: bounce 2s ease-in-out infinite;
+    }
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-12px); }
+    }
+    .start-btn {
+      margin-top: 1rem;
+      padding: 1rem 3rem;
+      font-family: var(--font-display);
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: white;
+      background: var(--db-lava);
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      letter-spacing: 0.02em;
+    }
+    .start-btn:hover { background: #E02E1A; transform: scale(1.05); }
+
+    /* === QUESTION SCREEN === */
+    #question-screen {
+      background: var(--db-ink);
+      gap: 0;
+      justify-content: flex-start;
+      padding: 0;
+    }
+
+    .q-header {
+      width: 100%;
+      padding: 1.5rem 3rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--db-navy);
+      border-bottom: 3px solid var(--db-lava);
+    }
+    .q-number {
+      font-family: var(--font-mono);
+      font-size: 0.9rem;
+      color: var(--db-lava-light);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    .q-category {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: rgba(255,255,255,0.5);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .q-timer {
+      font-family: var(--font-mono);
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--db-green);
+      min-width: 60px;
+      text-align: center;
+      transition: color 0.3s;
+    }
+    .q-timer.warning { color: var(--db-amber); }
+    .q-timer.danger { color: var(--db-lava); animation: pulse 0.5s ease-in-out infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+    .q-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 4rem;
+      width: 100%;
+      max-width: 1400px;
+      margin: 0 auto;
+      gap: 2.5rem;
+    }
+
+    .q-text {
+      font-family: var(--font-display);
+      font-size: clamp(1.8rem, 3.5vw, 3.2rem);
+      font-weight: 700;
+      text-align: center;
+      line-height: 1.3;
+      max-width: 900px;
+    }
+
+    .q-options {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      width: 100%;
+      max-width: 900px;
+    }
+
+    .q-option {
+      padding: 1.5rem 2rem;
+      border-radius: 16px;
+      font-family: var(--font-display);
+      font-size: clamp(1rem, 1.8vw, 1.4rem);
+      font-weight: 500;
+      cursor: pointer;
+      border: 2px solid rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.05);
+      color: white;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      user-select: none;
+    }
+    .q-option:hover { border-color: rgba(255,255,255,0.4); background: rgba(255,255,255,0.1); transform: translateY(-2px); }
+    .q-option .opt-key {
+      width: 44px; height: 44px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+    .q-option:nth-child(1) .opt-key { background: var(--db-lava); }
+    .q-option:nth-child(2) .opt-key { background: var(--db-indigo); }
+    .q-option:nth-child(3) .opt-key { background: var(--db-green); }
+    .q-option:nth-child(4) .opt-key { background: var(--db-amber); color: var(--db-ink); }
+
+    .q-option.correct {
+      border-color: var(--db-green);
+      background: rgba(0,169,114,0.2);
+      animation: correctPop 0.4s ease;
+    }
+    .q-option.wrong {
+      border-color: rgba(255,255,255,0.05);
+      background: rgba(255,255,255,0.02);
+      opacity: 0.4;
+    }
+    @keyframes correctPop {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.03); }
+      100% { transform: scale(1); }
+    }
+
+    .q-footer {
+      width: 100%;
+      padding: 1rem 3rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--db-navy);
+    }
+    .q-hint {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.35);
+    }
+    .q-score-bar {
+      display: flex;
+      gap: 0.5rem;
+    }
+    .q-score-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.15);
+      transition: all 0.3s;
+    }
+    .q-score-dot.correct { background: var(--db-green); }
+    .q-score-dot.wrong { background: var(--db-lava); }
+    .q-score-dot.current { background: var(--db-amber); box-shadow: 0 0 8px var(--db-amber); }
+
+    /* Answer explanation */
+    .q-explanation {
+      text-align: center;
+      max-width: 700px;
+      font-size: 1.1rem;
+      color: rgba(255,255,255,0.7);
+      line-height: 1.5;
+      display: none;
+    }
+    .q-explanation.visible { display: block; animation: fadeUp 0.4s ease; }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* === RESULTS SCREEN === */
+    #results-screen {
+      background: linear-gradient(135deg, var(--db-navy) 0%, var(--db-ink) 100%);
+      text-align: center;
+      gap: 2rem;
+    }
+    .results-score {
+      font-family: var(--font-display);
+      font-size: clamp(5rem, 12vw, 10rem);
+      font-weight: 700;
+      color: var(--db-lava);
+      line-height: 1;
+    }
+    .results-label {
+      font-size: 1.5rem;
+      color: rgba(255,255,255,0.6);
+    }
+    .results-message {
+      font-size: clamp(1.5rem, 3vw, 2.5rem);
+      font-weight: 700;
+      max-width: 600px;
+      line-height: 1.3;
+    }
+    .results-breakdown {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 1rem;
+    }
+    .results-dot {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      transition: all 0.3s;
+    }
+    .results-dot.correct { background: var(--db-green); }
+    .results-dot.wrong { background: rgba(255,255,255,0.15); }
+
+    /* === NAV HINT === */
+    .nav-hint {
+      position: fixed;
+      bottom: 1rem;
+      right: 1.5rem;
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: rgba(255,255,255,0.25);
+      z-index: 50;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TITLE SCREEN -->
+  <div id="title-screen" class="screen active">
+    <div class="emoji-parade">&#x1F6D2; &#x1F34E; &#x1F4CA; &#x1F916; &#x1F6D2;</div>
+    <h1>The Great<br><span style="color:var(--db-lava);">Grocery Data</span><br>Quiz</h1>
+    <p class="subtitle">How well do you know Australian retail data, AI, and the Databricks platform?</p>
+    <button class="start-btn" onclick="startQuiz()">Let's Go &#x2192;</button>
+    <p style="font-family:var(--font-mono);font-size:0.75rem;color:rgba(255,255,255,0.3);margin-top:1rem;">Press Space or Enter to start</p>
+  </div>
+
+  <!-- QUESTION SCREEN -->
+  <div id="question-screen" class="screen">
+    <div class="q-header">
+      <div>
+        <div class="q-number" id="qNumber">QUESTION 1 of 10</div>
+        <div class="q-category" id="qCategory">AUSTRALIAN RETAIL</div>
+      </div>
+      <div class="q-timer" id="qTimer">30</div>
+    </div>
+    <div class="q-body">
+      <div class="q-text" id="qText">Loading...</div>
+      <div class="q-options" id="qOptions"></div>
+      <div class="q-explanation" id="qExplanation"></div>
+    </div>
+    <div class="q-footer">
+      <div class="q-hint" id="qHint">Click an answer or press 1-4 &middot; Space for next</div>
+      <div class="q-score-bar" id="qScoreBar"></div>
+    </div>
+  </div>
+
+  <!-- RESULTS SCREEN -->
+  <div id="results-screen" class="screen">
+    <div class="emoji-parade" style="font-size:4rem;">&#x1F389;</div>
+    <div class="results-label">Final Score</div>
+    <div class="results-score" id="finalScore">0/10</div>
+    <div class="results-message" id="finalMessage">Nice work!</div>
+    <div class="results-breakdown" id="resultsBreakdown"></div>
+    <button class="start-btn" onclick="startQuiz()" style="margin-top:1rem;">Play Again</button>
+  </div>
+
+  <div class="nav-hint">Arrow keys / Space to navigate &middot; 1-4 to answer</div>
+
+  <script>
+    /* ============================================================
+       QUIZ DATA — Grocery, Data, AI, and Databricks
+       ============================================================ */
+    const QUESTIONS = [
+      {
+        category: "AUSTRALIAN RETAIL",
+        question: "Which Australian state has the highest monthly food retail turnover?",
+        options: ["Victoria", "New South Wales", "Queensland", "Western Australia"],
+        correct: 1,
+        explanation: "NSW consistently leads with ~$3.5B/month in food retail turnover according to ABS data."
+      },
+      {
+        category: "GROCERY DATA",
+        question: "What does the ABS Retail Trade survey measure?",
+        options: ["Number of stores opened", "Monthly retail turnover by industry", "Customer satisfaction scores", "Product shelf life"],
+        correct: 1,
+        explanation: "The ABS Retail Trade survey (cat. 8501.0) measures monthly turnover across retail industries including food."
+      },
+      {
+        category: "FOOD SAFETY",
+        question: "FSANZ is the food safety regulator. What does the 'NZ' stand for?",
+        options: ["National Zone", "New Zealand", "Nutritional Zone", "No Zones"],
+        correct: 1,
+        explanation: "Food Standards Australia New Zealand (FSANZ) — a joint body covering both countries."
+      },
+      {
+        category: "AI & AGENTS",
+        question: "In vibe coding, what does CLAUDE.md do?",
+        options: ["Installs Claude on your machine", "Defines coding standards and context for the AI agent", "Encrypts your source code", "Runs unit tests automatically"],
+        correct: 1,
+        explanation: "CLAUDE.md is a markdown file that gives the agent context about your project — standards, architecture, and preferences."
+      },
+      {
+        category: "DATABRICKS",
+        question: "What is the Databricks medallion architecture?",
+        options: ["A security certification", "Bronze → Silver → Gold data quality layers", "A type of cluster configuration", "The Unity Catalog permission model"],
+        correct: 1,
+        explanation: "Bronze (raw), Silver (cleaned), Gold (business-ready) — progressive data refinement through pipeline layers."
+      },
+      {
+        category: "BDD & TESTING",
+        question: "In BDD, what language are feature files written in?",
+        options: ["Python", "SQL", "Gherkin (Given/When/Then)", "YAML"],
+        correct: 2,
+        explanation: "Gherkin is plain-English syntax: Given (setup), When (action), Then (assertion). Anyone on the team can read it."
+      },
+      {
+        category: "AUSTRALIAN RETAIL",
+        question: "Roughly how much do Australians spend on food retail per month?",
+        options: ["$5 billion", "$10 billion", "$15 billion", "$25 billion"],
+        correct: 2,
+        explanation: "Australia's monthly food retail turnover is approximately $15B according to ABS data (2024)."
+      },
+      {
+        category: "AI & AGENTS",
+        question: "What does MCP stand for in the AI agent ecosystem?",
+        options: ["Machine Code Protocol", "Model Context Protocol", "Multi-Cloud Platform", "Managed Compute Pool"],
+        correct: 1,
+        explanation: "Model Context Protocol — the 'USB-C for AI' that standardises how agents connect to tools and data sources."
+      },
+      {
+        category: "DATABRICKS",
+        question: "What is a 'Genie space' on Databricks?",
+        options: ["A virtual machine type", "A natural language query interface for business users", "A type of cluster", "A CI/CD pipeline tool"],
+        correct: 1,
+        explanation: "Genie lets business users ask questions about data in plain English — no SQL required. Point it at your Gold tables."
+      },
+      {
+        category: "FOOD & DATA",
+        question: "Which Australian food category has seen the highest CPI increase since 2020?",
+        options: ["Dairy", "Bread & cereals", "Meat & seafood", "Fruit & vegetables"],
+        correct: 1,
+        explanation: "Bread & cereals saw some of the steepest CPI increases — driven by global wheat prices and supply chain disruption."
+      }
+    ];
+
+    /* ============================================================
+       QUIZ ENGINE
+       ============================================================ */
+    let currentQ = 0;
+    let score = 0;
+    let answers = [];
+    let timer = null;
+    let timeLeft = 30;
+    let answered = false;
+
+    function showScreen(id) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+    }
+
+    function startQuiz() {
+      currentQ = 0;
+      score = 0;
+      answers = [];
+      showScreen('question-screen');
+      buildScoreBar();
+      loadQuestion();
+    }
+
+    function buildScoreBar() {
+      const bar = document.getElementById('qScoreBar');
+      bar.innerHTML = '';
+      QUESTIONS.forEach((_, i) => {
+        const dot = document.createElement('div');
+        dot.className = 'q-score-dot' + (i === 0 ? ' current' : '');
+        dot.id = 'dot-' + i;
+        bar.appendChild(dot);
+      });
+    }
+
+    function loadQuestion() {
+      if (currentQ >= QUESTIONS.length) {
+        showResults();
+        return;
+      }
+
+      const q = QUESTIONS[currentQ];
+      answered = false;
+
+      document.getElementById('qNumber').textContent = `QUESTION ${currentQ + 1} of ${QUESTIONS.length}`;
+      document.getElementById('qCategory').textContent = q.category;
+      document.getElementById('qText').textContent = q.question;
+      document.getElementById('qExplanation').classList.remove('visible');
+      document.getElementById('qExplanation').textContent = '';
+      document.getElementById('qHint').textContent = 'Click an answer or press 1-4 \u00b7 Space for next';
+
+      const keys = ['A', 'B', 'C', 'D'];
+      const opts = document.getElementById('qOptions');
+      opts.innerHTML = '';
+      q.options.forEach((opt, i) => {
+        const div = document.createElement('div');
+        div.className = 'q-option';
+        div.innerHTML = `<span class="opt-key">${keys[i]}</span><span>${opt}</span>`;
+        div.addEventListener('click', () => selectAnswer(i));
+        opts.appendChild(div);
+      });
+
+      // Update score dots
+      document.querySelectorAll('.q-score-dot').forEach((dot, i) => {
+        dot.classList.toggle('current', i === currentQ);
+      });
+
+      // Start timer
+      timeLeft = 30;
+      updateTimer();
+      clearInterval(timer);
+      timer = setInterval(() => {
+        if (answered) return;
+        timeLeft--;
+        updateTimer();
+        if (timeLeft <= 0) {
+          clearInterval(timer);
+          selectAnswer(-1); // time's up
+        }
+      }, 1000);
+    }
+
+    function updateTimer() {
+      const el = document.getElementById('qTimer');
+      el.textContent = timeLeft;
+      el.classList.remove('warning', 'danger');
+      if (timeLeft <= 5) el.classList.add('danger');
+      else if (timeLeft <= 10) el.classList.add('warning');
+    }
+
+    function selectAnswer(idx) {
+      if (answered) return;
+      answered = true;
+      clearInterval(timer);
+
+      const q = QUESTIONS[currentQ];
+      const options = document.querySelectorAll('.q-option');
+      const isCorrect = idx === q.correct;
+
+      if (isCorrect) score++;
+      answers.push(isCorrect);
+
+      // Highlight correct/wrong
+      options.forEach((opt, i) => {
+        if (i === q.correct) {
+          opt.classList.add('correct');
+        } else {
+          opt.classList.add('wrong');
+        }
+      });
+
+      // Update score dot
+      const dot = document.getElementById('dot-' + currentQ);
+      dot.classList.remove('current');
+      dot.classList.add(isCorrect ? 'correct' : 'wrong');
+
+      // Show explanation
+      const exp = document.getElementById('qExplanation');
+      exp.textContent = (isCorrect ? '\u2705 Correct! ' : '\u274C Wrong! ') + q.explanation;
+      exp.classList.add('visible');
+
+      document.getElementById('qHint').textContent = 'Press Space or \u2192 for next question';
+    }
+
+    function nextQuestion() {
+      if (!answered) return;
+      currentQ++;
+      loadQuestion();
+    }
+
+    function showResults() {
+      showScreen('results-screen');
+      document.getElementById('finalScore').textContent = `${score}/${QUESTIONS.length}`;
+
+      const pct = score / QUESTIONS.length;
+      let msg = '';
+      if (pct === 1) msg = "Perfect score! You're a grocery data genius! \uD83C\uDF1F";
+      else if (pct >= 0.8) msg = "Impressive! You clearly know your data. \uD83D\uDCAA";
+      else if (pct >= 0.6) msg = "Solid effort! A few more labs and you'll ace it. \uD83D\uDE80";
+      else if (pct >= 0.4) msg = "Good start! The workshop will fill in the gaps. \uD83D\uDCDA";
+      else msg = "Time to pay attention in the labs! \uD83D\uDE04";
+      document.getElementById('finalMessage').textContent = msg;
+
+      const breakdown = document.getElementById('resultsBreakdown');
+      breakdown.innerHTML = '';
+      answers.forEach(correct => {
+        const dot = document.createElement('div');
+        dot.className = 'results-dot ' + (correct ? 'correct' : 'wrong');
+        breakdown.appendChild(dot);
+      });
+    }
+
+    /* ============================================================
+       KEYBOARD NAVIGATION
+       ============================================================ */
+    document.addEventListener('keydown', (e) => {
+      const titleActive = document.getElementById('title-screen').classList.contains('active');
+      const questionActive = document.getElementById('question-screen').classList.contains('active');
+      const resultsActive = document.getElementById('results-screen').classList.contains('active');
+
+      if (titleActive) {
+        if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); startQuiz(); }
+      } else if (questionActive) {
+        if (e.key === '1' || e.key === 'a' || e.key === 'A') selectAnswer(0);
+        else if (e.key === '2' || e.key === 'b' || e.key === 'B') selectAnswer(1);
+        else if (e.key === '3' || e.key === 'c' || e.key === 'C') selectAnswer(2);
+        else if (e.key === '4' || e.key === 'd' || e.key === 'D') selectAnswer(3);
+        else if (e.key === ' ' || e.key === 'ArrowRight' || e.key === 'Enter') { e.preventDefault(); nextQuestion(); }
+      } else if (resultsActive) {
+        if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); startQuiz(); }
+      }
+    });
+  </script>
+</body>
+</html>

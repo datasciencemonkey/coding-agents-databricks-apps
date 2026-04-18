@@ -112,6 +112,7 @@ setup_state = {
         {"id": "gemini",     "label": "Configuring Gemini CLI",       "status": "pending", "started_at": None, "completed_at": None, "error": None},
         {"id": "databricks", "label": "Setting up Databricks CLI",    "status": "pending", "started_at": None, "completed_at": None, "error": None},
         {"id": "mlflow",     "label": "Enabling MLflow tracing",       "status": "pending", "started_at": None, "completed_at": None, "error": None},
+        {"id": "projects",   "label": "Setting up workshop projects",  "status": "pending", "started_at": None, "completed_at": None, "error": None},
     ]
 }
 
@@ -197,6 +198,18 @@ def _setup_git_config():
         f.write("\n".join(lines) + "\n")
     logger.info(f"Git config written to {gitconfig_path}")
 
+    # Configure gh as the git credential helper (if gh is available).
+    # NOTE: gh must already be authenticated (via `gh auth login` or GH_TOKEN env var)
+    # for the credential helper to work. Without auth, git operations to GitHub will fail.
+    try:
+        subprocess.run(
+            ["gh", "auth", "setup-git"],
+            capture_output=True, timeout=10,
+        )
+        logger.info("gh auth setup-git configured")
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        logger.debug("gh not available, skipping credential helper setup")
+
     # Write post-commit hook for workspace sync (works from any CLI: Claude, Gemini, OpenCode, etc.)
     # Only syncs repos inside ~/projects/ — skips the app source and any other repos
     post_commit = os.path.join(hooks_dir, "post-commit")
@@ -237,8 +250,81 @@ def _setup_git_config():
     os.chmod(post_commit, 0o755)
     logger.info(f"Post-commit hook written to {post_commit}")
 
+    # Write `wsync` command to ~/.local/bin for manual workspace sync
+    local_bin = os.path.join(home, ".local", "bin")
+    os.makedirs(local_bin, exist_ok=True)
+    wsync_path = os.path.join(local_bin, "wsync")
+    with open(wsync_path, "w") as f:
+        f.write('#!/bin/bash\n')
+        f.write('# Manual sync to Databricks Workspace\n')
+        f.write('REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"\n')
+        f.write('if [ -z "$REPO_ROOT" ]; then\n')
+        f.write('    echo "Error: not inside a git repo"\n')
+        f.write('    exit 1\n')
+        f.write('fi\n')
+        f.write('APP_DIR="/app/python/source_code"\n')
+        f.write('SYNC_SCRIPT="$APP_DIR/sync_to_workspace.py"\n')
+        f.write('if [ ! -f "$SYNC_SCRIPT" ]; then\n')
+        f.write('    echo "Error: sync script not found"\n')
+        f.write('    exit 1\n')
+        f.write('fi\n')
+        f.write('echo "Syncing $REPO_ROOT to Databricks Workspace..."\n')
+        f.write('uv run --project "$APP_DIR" python "$SYNC_SCRIPT" "$REPO_ROOT"\n')
+    os.chmod(wsync_path, 0o755)
+    logger.info(f"wsync command written to {wsync_path}")
+
     # Reinit app source git to remove template origin (Databricks Apps only)
     _reinit_app_git()
+
+
+def _setup_embedded_projects():
+    """Copy embedded project templates from app source into ~/projects/ and git-init them.
+
+    Projects are bundled under <app_source>/projects/<name>/ at deploy time.
+    Each is copied to ~/projects/<name>/ (if not already present) and initialized
+    as a standalone git repo so commits trigger workspace sync via post-commit hook.
+    """
+    import shutil
+
+    app_dir = os.path.dirname(os.path.abspath(__file__))
+    embedded_dir = os.path.join(app_dir, "projects")
+    if not os.path.isdir(embedded_dir):
+        return
+
+    home = os.environ.get("HOME", "/app/python/source_code")
+    if not home or home == "/":
+        home = "/app/python/source_code"
+    projects_dir = os.path.join(home, "projects")
+    os.makedirs(projects_dir, exist_ok=True)
+
+    for name in os.listdir(embedded_dir):
+        src = os.path.join(embedded_dir, name)
+        if not os.path.isdir(src):
+            continue
+        dest = os.path.join(projects_dir, name)
+        if os.path.exists(dest):
+            logger.info(f"Project already exists, skipping: {dest}")
+            continue
+
+        shutil.copytree(src, dest)
+        # Initialize as a git repo so post-commit hooks work
+        subprocess.run(["git", "init"], cwd=dest, capture_output=True)
+        subprocess.run(["git", "add", "."], cwd=dest, capture_output=True)
+        subprocess.run(
+            ["git", "commit", "-m", "Initial workshop project"],
+            cwd=dest, capture_output=True,
+        )
+        logger.info(f"Embedded project initialized: {dest}")
+
+
+def _run_projects_step():
+    """Run embedded project setup as a tracked setup step."""
+    _update_step("projects", status="running", started_at=time.time())
+    try:
+        _setup_embedded_projects()
+        _update_step("projects", status="complete", completed_at=time.time())
+    except Exception as e:
+        _update_step("projects", status="error", completed_at=time.time(), error=str(e))
 
 
 def _reinit_app_git():
@@ -291,11 +377,25 @@ def _configure_all_cli_auth(token):
         anthropic_base_url = f"{databricks_host}/serving-endpoints/anthropic"
 
     settings = {
+        "theme": "dark",
+        "permissions": {
+            "defaultMode": "auto",
+            "allow": [
+                "Bash(databricks *)",
+                "Bash(uv *)",
+                "Bash(git *)",
+                "Bash(make *)",
+                "Bash(python *)",
+                "Bash(pytest *)",
+                "Bash(ruff *)",
+                "Bash(wsync)",
+            ],
+        },
         "env": {
-            "ANTHROPIC_MODEL": os.environ.get("ANTHROPIC_MODEL", "databricks-claude-opus-4-6"),
+            "ANTHROPIC_MODEL": os.environ.get("ANTHROPIC_MODEL", "databricks-claude-opus-4-7"),
             "ANTHROPIC_BASE_URL": anthropic_base_url,
             "ANTHROPIC_AUTH_TOKEN": token,
-            "ANTHROPIC_DEFAULT_OPUS_MODEL": "databricks-claude-opus-4-6",
+            "ANTHROPIC_DEFAULT_OPUS_MODEL": "databricks-claude-opus-4-7",
             "ANTHROPIC_DEFAULT_SONNET_MODEL": "databricks-claude-sonnet-4-6",
             "ANTHROPIC_DEFAULT_HAIKU_MODEL": "databricks-claude-haiku-4-5",
             "ANTHROPIC_CUSTOM_HEADERS": "x-databricks-use-coding-agent-mode: true",
@@ -372,11 +472,13 @@ def run_setup():
         ("mlflow",     ["uv", "run", "python", "setup_mlflow.py"]),
     ]
 
-    with ThreadPoolExecutor(max_workers=len(parallel_steps)) as executor:
+    with ThreadPoolExecutor(max_workers=len(parallel_steps) + 1) as executor:
         futures = [
             executor.submit(_run_step, step_id, command)
             for step_id, command in parallel_steps
         ]
+        # Embedded projects (copy + git init) — runs in parallel with agent setup
+        futures.append(executor.submit(_run_projects_step))
         wait(futures)
 
     with setup_lock:
@@ -386,24 +488,52 @@ def run_setup():
 
 
 def get_token_owner():
-    """Get the owner email. Priority: Apps API (app.creator) > PAT (current_user.me).
+    """Get the owner email.
 
-    Uses the auto-provisioned SP to call the Apps API — no PAT needed for
-    owner resolution. Falls back to PAT-based lookup for backward compat.
+    Priority: APP_OWNER_EMAIL env var > app description > app.creator > PAT.
+    The spawner sets owner:{email} in the app description when creating apps on
+    behalf of users, so the child app knows its owner without requiring a PAT.
+
+    The Apps API call retries with backoff because the app's auto-provisioned SP
+    credentials may not be ready for OAuth token exchange immediately at boot.
     """
     from databricks.sdk import WorkspaceClient
 
-    # 1. Try Apps API via SP credentials (no PAT needed)
+    # 0. Explicit owner from deployer (env var)
+    explicit_owner = os.environ.get("APP_OWNER_EMAIL", "").strip().lower()
+    if explicit_owner:
+        logger.info(f"Owner resolved from APP_OWNER_EMAIL: {explicit_owner}")
+        return explicit_owner
+
+    # 1. Try Apps API via SP credentials (no PAT needed) — retry for SP propagation
     app_name = os.environ.get("DATABRICKS_APP_NAME")
     if app_name:
-        try:
-            w = WorkspaceClient()  # auto-detects SP credentials
-            app = w.apps.get(name=app_name)
-            owner = (app.creator or "").lower()
-            logger.info(f"Owner resolved from app.creator: {owner}")
-            return owner
-        except Exception as e:
-            logger.warning(f"Could not resolve owner via Apps API: {e}")
+        max_retries = 6
+        base_delay = 5.0
+        for attempt in range(max_retries):
+            try:
+                w = WorkspaceClient()  # auto-detects SP credentials
+                app_info = w.apps.get(name=app_name)
+
+                # Spawner sets owner in description as "owner:{email}"
+                desc = getattr(app_info, "description", "") or ""
+                if desc.startswith("owner:"):
+                    owner = desc.split(":", 1)[1].strip().lower()
+                    logger.info(f"Owner resolved from app description: {owner}")
+                    return owner
+
+                owner = (app_info.creator or "").lower()
+                logger.info(f"Owner resolved from app.creator: {owner}")
+                return owner
+            except Exception as e:
+                delay = min(base_delay * (2**attempt), 60)
+                logger.warning(
+                    f"Apps API call failed (attempt {attempt + 1}/{max_retries}): {e}"
+                    f" — retrying in {delay:.0f}s"
+                )
+                if attempt < max_retries - 1:
+                    time.sleep(delay)
+        logger.error(f"Could not resolve owner via Apps API after {max_retries} attempts")
 
     # 2. Fallback: PAT-based resolution
     try:

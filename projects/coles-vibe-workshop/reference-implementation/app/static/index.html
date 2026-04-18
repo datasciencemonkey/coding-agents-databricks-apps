@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Grocery Intelligence Platform</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <style>
+    :root {
+      --db-navy:  #1B3139;
+      --db-lava:  #FF3621;
+      --db-teal:  #00A972;
+      --db-green: #1B8A4A;
+      --db-oat:   #F5F0EB;
+    }
+    body { font-family: system-ui, -apple-system, sans-serif; background: var(--db-oat); }
+    .brand-navy  { background-color: var(--db-navy); }
+    .brand-lava  { background-color: var(--db-lava); }
+    .text-navy   { color: var(--db-navy); }
+    .text-lava   { color: var(--db-lava); }
+    .border-lava { border-color: var(--db-lava); }
+    .kpi-card { transition: transform 0.15s ease; }
+    .kpi-card:hover { transform: translateY(-2px); }
+    .spinner { display: none; }
+    .htmx-request .spinner { display: inline-block; }
+    .htmx-request .content { opacity: 0.5; }
+  </style>
+</head>
+<body class="min-h-screen">
+
+  <!-- Header -->
+  <header class="brand-navy text-white px-6 py-4 shadow-lg">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-bold tracking-tight">Grocery Intelligence Platform</h1>
+        <p class="text-sm opacity-75 mt-0.5">Australian Retail Trade &amp; Food Price Analytics</p>
+      </div>
+      <div class="flex items-center gap-4 text-sm opacity-75">
+        <span>Databricks + Coles</span>
+        <span id="health-badge" class="px-2 py-0.5 rounded text-xs font-mono bg-gray-600">...</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-6 py-8 space-y-8">
+
+    <!-- KPI Cards -->
+    <section id="kpi-section">
+      <h2 class="text-lg font-semibold text-navy mb-4">Key Metrics</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="kpi-grid">
+        <div class="kpi-card bg-white rounded-xl shadow p-5">
+          <p class="text-sm text-gray-500 uppercase tracking-wide">Total Turnover (12m)</p>
+          <p class="text-3xl font-bold text-navy mt-1" id="kpi-turnover">--</p>
+          <p class="text-xs text-gray-400 mt-1">AUD millions</p>
+        </div>
+        <div class="kpi-card bg-white rounded-xl shadow p-5">
+          <p class="text-sm text-gray-500 uppercase tracking-wide">YoY Growth</p>
+          <p class="text-3xl font-bold mt-1" id="kpi-yoy">--</p>
+          <p class="text-xs text-gray-400 mt-1">Latest month</p>
+        </div>
+        <div class="kpi-card bg-white rounded-xl shadow p-5">
+          <p class="text-sm text-gray-500 uppercase tracking-wide">Food Inflation</p>
+          <p class="text-3xl font-bold mt-1" id="kpi-inflation">--</p>
+          <p class="text-xs text-gray-400 mt-1">Latest quarter YoY</p>
+        </div>
+        <div class="kpi-card bg-white rounded-xl shadow p-5">
+          <p class="text-sm text-gray-500 uppercase tracking-wide">Food Recalls</p>
+          <p class="text-3xl font-bold text-navy mt-1" id="kpi-recalls">--</p>
+          <p class="text-xs text-gray-400 mt-1">Recent count</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Monthly Trend Chart -->
+    <section class="bg-white rounded-xl shadow p-6">
+      <h2 class="text-lg font-semibold text-navy mb-4">National Turnover — Monthly Trend</h2>
+      <div id="chart-area" class="h-64 flex items-end gap-1 overflow-x-auto"></div>
+      <p class="text-xs text-gray-400 mt-2 text-right" id="chart-label">Loading...</p>
+    </section>
+
+    <!-- Natural Language Query -->
+    <section class="bg-white rounded-xl shadow p-6">
+      <h2 class="text-lg font-semibold text-navy mb-2">Ask a Question</h2>
+      <p class="text-sm text-gray-500 mb-4">
+        Ask in plain English — the platform generates SQL and queries your data.
+      </p>
+      <form id="ask-form" class="flex gap-3">
+        <input
+          type="text"
+          id="ask-input"
+          name="question"
+          placeholder="e.g. Which state had the highest food retail turnover last month?"
+          class="flex-1 border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF3621] focus:border-transparent"
+        />
+        <button
+          type="submit"
+          class="brand-lava text-white px-5 py-2 rounded-lg text-sm font-medium hover:opacity-90 transition"
+        >
+          <span class="spinner animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-1"></span>
+          Ask
+        </button>
+      </form>
+      <div id="ask-result" class="mt-4 hidden">
+        <details class="mb-3">
+          <summary class="text-xs text-gray-500 cursor-pointer">Generated SQL</summary>
+          <pre id="ask-sql" class="text-xs bg-gray-50 rounded p-3 mt-1 overflow-x-auto"></pre>
+        </details>
+        <div id="ask-table-wrapper" class="overflow-x-auto"></div>
+      </div>
+    </section>
+
+    <!-- Recent Recalls -->
+    <section class="bg-white rounded-xl shadow p-6">
+      <h2 class="text-lg font-semibold text-navy mb-4">Recent Food Recalls</h2>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm" id="recalls-table">
+          <thead>
+            <tr class="text-left text-gray-500 border-b">
+              <th class="pb-2 pr-4">Date</th>
+              <th class="pb-2 pr-4">Product</th>
+              <th class="pb-2 pr-4">Category</th>
+              <th class="pb-2 pr-4">Issue</th>
+              <th class="pb-2">State</th>
+            </tr>
+          </thead>
+          <tbody id="recalls-body">
+            <tr><td colspan="5" class="py-4 text-gray-400">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="text-center py-6 text-xs text-gray-400">
+    Grocery Intelligence Platform &mdash; Coles Vibe Coding Workshop Reference Implementation
+  </footer>
+
+  <script>
+    // -----------------------------------------------------------------------
+    // Helpers
+    // -----------------------------------------------------------------------
+    const fmt = (n) => n == null ? '--' : Number(n).toLocaleString('en-AU', { maximumFractionDigits: 1 });
+    const pct = (n) => n == null ? '--' : `${n >= 0 ? '+' : ''}${Number(n).toFixed(2)}%`;
+
+    function colorForPct(el, val) {
+      if (val == null) return;
+      el.classList.add(val >= 0 ? 'text-green-600' : 'text-red-600');
+    }
+
+    function buildTable(rows) {
+      if (!rows || rows.length === 0) return '<p class="text-sm text-gray-400">No results</p>';
+      const cols = Object.keys(rows[0]);
+      let html = '<table class="w-full text-sm"><thead><tr class="text-left text-gray-500 border-b">';
+      cols.forEach(c => html += `<th class="pb-2 pr-4">${c}</th>`);
+      html += '</tr></thead><tbody>';
+      rows.slice(0, 50).forEach(r => {
+        html += '<tr class="border-b border-gray-100">';
+        cols.forEach(c => html += `<td class="py-1.5 pr-4">${r[c] ?? ''}</td>`);
+        html += '</tr>';
+      });
+      html += '</tbody></table>';
+      if (rows.length > 50) html += `<p class="text-xs text-gray-400 mt-2">Showing 50 of ${rows.length} rows</p>`;
+      return html;
+    }
+
+    // -----------------------------------------------------------------------
+    // Health check
+    // -----------------------------------------------------------------------
+    fetch('/health')
+      .then(r => r.json())
+      .then(d => {
+        const badge = document.getElementById('health-badge');
+        badge.textContent = d.status;
+        badge.classList.replace('bg-gray-600', 'bg-green-600');
+      })
+      .catch(() => {
+        const badge = document.getElementById('health-badge');
+        badge.textContent = 'error';
+        badge.classList.replace('bg-gray-600', 'bg-red-600');
+      });
+
+    // -----------------------------------------------------------------------
+    // Load metrics
+    // -----------------------------------------------------------------------
+    fetch('/api/metrics')
+      .then(r => r.json())
+      .then(data => {
+        // KPI — total turnover from top states
+        const totalTurnover = data.top_states.reduce((s, r) => s + r.total_turnover, 0);
+        document.getElementById('kpi-turnover').textContent = `$${fmt(totalTurnover)}M`;
+
+        // KPI — YoY growth
+        const yoyEl = document.getElementById('kpi-yoy');
+        yoyEl.textContent = pct(data.yoy_growth);
+        colorForPct(yoyEl, data.yoy_growth);
+
+        // KPI — food inflation
+        const infEl = document.getElementById('kpi-inflation');
+        infEl.textContent = pct(data.food_inflation);
+        colorForPct(infEl, data.food_inflation);
+
+        // Bar chart — monthly trend
+        const chart = document.getElementById('chart-area');
+        const trend = data.monthly_trend || [];
+        if (trend.length > 0) {
+          const maxVal = Math.max(...trend.map(t => t.national_turnover));
+          chart.innerHTML = trend.map(t => {
+            const h = Math.round((t.national_turnover / maxVal) * 100);
+            const label = t.month.slice(0, 7);
+            return `<div class="flex flex-col items-center flex-1 min-w-[28px]">
+              <div class="w-full rounded-t" style="height:${h}%;background:var(--db-navy);" title="${label}: $${t.national_turnover}M"></div>
+              <span class="text-[9px] text-gray-400 mt-1 rotate-[-45deg] origin-top-left whitespace-nowrap">${label}</span>
+            </div>`;
+          }).join('');
+          document.getElementById('chart-label').textContent =
+            `${trend[0].month.slice(0,7)} — ${trend[trend.length-1].month.slice(0,7)}`;
+        }
+      })
+      .catch(err => {
+        console.error('metrics error', err);
+        document.getElementById('chart-label').textContent = 'Failed to load metrics';
+      });
+
+    // -----------------------------------------------------------------------
+    // Load recalls
+    // -----------------------------------------------------------------------
+    fetch('/api/recalls')
+      .then(r => r.json())
+      .then(rows => {
+        document.getElementById('kpi-recalls').textContent = rows.length;
+        const body = document.getElementById('recalls-body');
+        if (rows.length === 0) {
+          body.innerHTML = '<tr><td colspan="5" class="py-4 text-gray-400">No recalls found</td></tr>';
+          return;
+        }
+        body.innerHTML = rows.map(r => `
+          <tr class="border-b border-gray-100">
+            <td class="py-1.5 pr-4 whitespace-nowrap">${r.date ?? ''}</td>
+            <td class="py-1.5 pr-4">${r.product ?? ''}</td>
+            <td class="py-1.5 pr-4">${r.category ?? ''}</td>
+            <td class="py-1.5 pr-4">${r.issue ?? ''}</td>
+            <td class="py-1.5">${r.state ?? ''}</td>
+          </tr>
+        `).join('');
+      })
+      .catch(err => {
+        console.error('recalls error', err);
+        document.getElementById('recalls-body').innerHTML =
+          '<tr><td colspan="5" class="py-4 text-red-400">Failed to load recalls</td></tr>';
+      });
+
+    // -----------------------------------------------------------------------
+    // Ask a question
+    // -----------------------------------------------------------------------
+    document.getElementById('ask-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const input = document.getElementById('ask-input');
+      const question = input.value.trim();
+      if (!question) return;
+
+      const resultDiv = document.getElementById('ask-result');
+      resultDiv.classList.remove('hidden');
+      document.getElementById('ask-sql').textContent = 'Thinking...';
+      document.getElementById('ask-table-wrapper').innerHTML =
+        '<p class="text-sm text-gray-400">Generating SQL and querying data...</p>';
+
+      try {
+        const resp = await fetch('/api/ask', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question }),
+        });
+        if (!resp.ok) {
+          const err = await resp.json();
+          throw new Error(err.detail || resp.statusText);
+        }
+        const data = await resp.json();
+        document.getElementById('ask-sql').textContent = data.sql;
+        document.getElementById('ask-table-wrapper').innerHTML = buildTable(data.results);
+      } catch (err) {
+        document.getElementById('ask-sql').textContent = 'Error';
+        document.getElementById('ask-table-wrapper').innerHTML =
+          `<p class="text-sm text-red-500">${err.message}</p>`;
+      }
+    });
+  </script>
+</body>
+</html>

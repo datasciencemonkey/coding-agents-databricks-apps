@@ -1,0 +1,7 @@
+command:
+  - gunicorn
+  - --timeout
+  - "300"
+  - app:app
+  # Auth: spawner uses its own SP via OAuth M2M.
+  # Grant the spawner's SP workspace admin permissions.

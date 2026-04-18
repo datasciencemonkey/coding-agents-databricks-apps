@@ -1,0 +1,27 @@
+bundle:
+  name: grocery-intelligence-demo
+
+variables:
+  team_name:
+    default: demo
+  schema:
+    default: demo
+
+include:
+  - resources/*.yml
+
+workspace:
+  profile: daveok
+
+# NOTE: The grocery_intelligence package under src/grocery_intelligence/
+# provides the canonical mappings and decode helpers. Pipeline notebooks
+# inline these because SDP's deprecated whl: field and glob: path resolution
+# prevent clean cross-module imports. For production, consider installing
+# the package via %pip in a setup notebook.
+
+targets:
+  dev:
+    default: true
+    variables:
+      team_name: demo
+      schema: demo

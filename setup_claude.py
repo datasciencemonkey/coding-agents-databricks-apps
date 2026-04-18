@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import shutil
 import subprocess
@@ -16,6 +17,20 @@ home = Path(os.environ["HOME"])
 claude_dir = home / ".claude"
 claude_dir.mkdir(exist_ok=True)
 
+# The coda-marketplace bundled with the CODA source is registered via
+# extraKnownMarketplaces in settings.json below. Claude Code auto-discovers
+# agents/ and commands/ inside enabled plugins, so we only need to:
+#   1. ensure hook scripts are executable (git doesn't preserve +x reliably)
+#   2. know the hooks/ path so we can wire hooks into settings.json
+marketplace_dir = Path(__file__).parent / "coda-marketplace"
+plugin_dir = marketplace_dir / "plugins" / "coda-essentials"
+hooks_dir = plugin_dir / "hooks"
+if hooks_dir.exists():
+    for hook in hooks_dir.iterdir():
+        if hook.is_file():
+            os.chmod(hook, 0o755)
+    print(f"coda-essentials hooks ready: {hooks_dir}")
+
 # 1. Write settings.json for Databricks model serving (requires DATABRICKS_TOKEN)
 token = os.environ.get("DATABRICKS_TOKEN", "").strip()
 if token:
@@ -30,35 +45,152 @@ if token:
         print(f"Using Databricks Host: {databricks_host}")
 
     settings = {
+        "theme": "dark",
+        "outputStyle": "Explanatory",
+        "extraKnownMarketplaces": {
+            "coda": {
+                "source": {
+                    "source": "directory",
+                    "path": str(marketplace_dir),
+                },
+            },
+        },
+        "enabledPlugins": {
+            "coda-essentials@coda": True,
+            "coda-databricks-skills@coda": True,
+        },
+        "permissions": {
+            "defaultMode": "auto",
+            "allow": [
+                "Bash(databricks *)",
+                "Bash(uv *)",
+                "Bash(git *)",
+                "Bash(make *)",
+                "Bash(python *)",
+                "Bash(pytest *)",
+                "Bash(ruff *)",
+                "Bash(wsync)",
+                "Bash(databricks sync * /Workspace/Shared/apps/coding-agents*)",
+                "Bash(databricks workspace import /Workspace/Shared/apps/coding-agents/*)",
+                "Bash(databricks workspace import-dir * /Workspace/Shared/apps/coding-agents*)",
+            ],
+            "deny": [
+                # Process kills that would take down the gunicorn worker (single-worker app)
+                "Bash(pkill *)",
+                "Bash(pkill)",
+                "Bash(killall *)",
+                "Bash(fuser -k *)",
+                "Bash(kill 1)",
+                "Bash(kill -9 1)",
+                "Bash(kill -- -1)",
+                # Catastrophic filesystem deletion (would wipe app source / home)
+                "Bash(rm -rf /)",
+                "Bash(rm -rf /*)",
+                "Bash(rm -rf /app*)",
+                "Bash(rm -rf ~)",
+                "Bash(rm -rf ~/*)",
+                "Bash(rm -rf $HOME)",
+                "Bash(rm -rf $HOME/*)",
+                # Credential/config destruction (breaks auth + PAT rotator)
+                "Bash(rm ~/.databrickscfg*)",
+                "Bash(rm -rf ~/.claude*)",
+                # Shared Workspace paths that other apps depend on
+                "Bash(rm -rf /Workspace*)",
+                "Bash(databricks workspace delete /Workspace/Shared*)",
+                "Bash(databricks workspace delete-dir /Workspace/Shared*)",
+                # Don't delete other users' coda apps
+                "Bash(databricks apps delete *)",
+                # System-level destructive
+                "Bash(shutdown *)",
+                "Bash(reboot *)",
+                "Bash(halt *)",
+                "Bash(mkfs *)",
+                "Bash(dd if=* of=/dev/*)",
+                "Bash(chmod -R * /app*)",
+                "Bash(chown -R * /app*)",
+            ],
+        },
         "env": {
-            "ANTHROPIC_MODEL": os.environ.get("ANTHROPIC_MODEL", "databricks-claude-opus-4-6"),
+            "ANTHROPIC_MODEL": os.environ.get("ANTHROPIC_MODEL", "databricks-claude-opus-4-7"),
             "ANTHROPIC_BASE_URL": anthropic_base_url,
             "ANTHROPIC_AUTH_TOKEN": token,
-            "ANTHROPIC_DEFAULT_OPUS_MODEL": "databricks-claude-opus-4-6",
+            "ANTHROPIC_DEFAULT_OPUS_MODEL": "databricks-claude-opus-4-7",
             "ANTHROPIC_DEFAULT_SONNET_MODEL": "databricks-claude-sonnet-4-6",
             "ANTHROPIC_DEFAULT_HAIKU_MODEL": "databricks-claude-haiku-4-5",
             "ANTHROPIC_CUSTOM_HEADERS": "x-databricks-use-coding-agent-mode: true",
             "CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS": "1",
-        }
+        },
+        "hooks": {
+            "SessionStart": [{
+                "matcher": "",
+                "hooks": [
+                    {"type": "command",
+                     "command": f"python3 {hooks_dir}/check-memory-staleness.py --cwd \"$PWD\"",
+                     "timeout": 10},
+                    {"type": "command",
+                     "command": f"bash {hooks_dir}/session-context-loader.sh",
+                     "timeout": 15},
+                ],
+            }],
+            "PostToolUse": [{
+                "matcher": "Edit|Write",
+                "hooks": [{
+                    "type": "command",
+                    "command": f"bash {hooks_dir}/memory-stamp-verified.sh",
+                    "timeout": 5,
+                }],
+            }],
+            "Stop": [{
+                "matcher": "",
+                "hooks": [
+                    {"type": "command",
+                     "command": f"bash {hooks_dir}/session-crystallize-nudge.sh",
+                     "timeout": 10},
+                    {"type": "command",
+                     "command": f"bash {hooks_dir}/push-brain-to-workspace.sh",
+                     "timeout": 5},
+                ],
+            }],
+        },
     }
 
     settings_path = claude_dir / "settings.json"
     settings_path.write_text(json.dumps(settings, indent=2))
     print(f"Claude configured: {settings_path}")
+
+    # 1b. Secure-egress network detection. If docs.databricks.com is blocked
+    # (common in enterprise Azure workspaces with a restrictive outbound
+    # allowlist), append a note to ~/.claude/CLAUDE.md telling agents to
+    # substitute learn.microsoft.com/en-us/azure/databricks/ — Microsoft
+    # Learn mirrors the Azure Databricks docs one-to-one and is usually
+    # allowlisted by default. Idempotent via a marker comment.
+    import urllib.request  # stdlib, no extra deps
+    _egress_marker = "<!-- coda-egress-fallback -->"
+    _egress_note = (
+        f"\n{_egress_marker}\n"
+        "## Documentation fallback — secure-egress workspace\n"
+        "`docs.databricks.com` is blocked from this environment. "
+        "When looking up Databricks docs, rewrite URLs:\n"
+        "- `docs.databricks.com/azure/en/X` → `learn.microsoft.com/en-us/azure/databricks/X`\n"
+        "- `docs.databricks.com/aws/en/X`   → `learn.microsoft.com/en-us/azure/databricks/X`\n"
+        "Microsoft Learn mirrors the Azure Databricks docs one-to-one and is usually reachable.\n"
+    )
+    try:
+        urllib.request.urlopen("https://docs.databricks.com/", timeout=3)
+        print("docs.databricks.com reachable — no egress fallback needed")
+    except Exception as _e:
+        print(f"docs.databricks.com unreachable ({type(_e).__name__}) — installing learn.microsoft.com fallback note")
+        _claude_md = claude_dir / "CLAUDE.md"
+        _existing = _claude_md.read_text() if _claude_md.exists() else ""
+        if _egress_marker not in _existing:
+            with open(_claude_md, "a") as _f:
+                _f.write(_egress_note)
+            print(f"Appended egress fallback note to {_claude_md}")
 else:
     print("No DATABRICKS_TOKEN — skipping settings.json (will be configured after PAT setup)")
 
 # 2. Write ~/.claude.json with onboarding skip AND MCP servers
-mcp_servers = {
-    "deepwiki": {
-        "type": "http",
-        "url": "https://mcp.deepwiki.com/mcp"
-    },
-    "exa": {
-        "type": "http",
-        "url": "https://mcp.exa.ai/mcp"
-    }
-}
+mcp_servers = {}
 
 # Auto-configure team-memory MCP if URL is provided
 team_memory_url = os.environ.get("TEAM_MEMORY_MCP_URL", "").strip().rstrip("/")
@@ -68,6 +200,14 @@ if team_memory_url:
         "url": f"{team_memory_url}/mcp"
     }
     print(f"Team memory MCP configured: {team_memory_url}/mcp")
+
+# Public-internet MCPs (deepwiki, exa) are opt-in: they live on the open
+# internet and won't work in air-gapped or secure-egress deployments. Set
+# ENABLE_PUBLIC_MCPS=true only when you know the runtime can reach them.
+if os.environ.get("ENABLE_PUBLIC_MCPS", "").strip().lower() in ("1", "true", "yes"):
+    mcp_servers["deepwiki"] = {"type": "http", "url": "https://mcp.deepwiki.com/mcp"}
+    mcp_servers["exa"] = {"type": "http", "url": "https://mcp.exa.ai/mcp"}
+    print("Public MCPs enabled (ENABLE_PUBLIC_MCPS=true): deepwiki, exa")
 
 claude_json = {
     "hasCompletedOnboarding": True,
@@ -95,21 +235,8 @@ if result.returncode == 0:
 else:
     print(f"CLI install warning: {result.stderr}")
 
-# 4. Copy subagent definitions to ~/.claude/agents/
-# These enable TDD workflow: prd-writer → test-generator → implementer → build-feature
-agents_src = Path(__file__).parent / "agents"
-agents_dst = claude_dir / "agents"
-agents_dst.mkdir(exist_ok=True)
-
-if agents_src.exists():
-    copied = []
-    for agent_file in agents_src.glob("*.md"):
-        shutil.copy2(str(agent_file), str(agents_dst / agent_file.name))
-        copied.append(agent_file.name)
-    if copied:
-        print(f"Subagents installed: {', '.join(copied)}")
-else:
-    print("No agents directory found, skipping subagent setup")
+# 4. Subagents are discovered automatically from coda-essentials plugin
+# (no manual copy step needed — the plugin's agents/ dir is scanned by Claude Code).
 
 # 5. Create projects directory
 projects_dir = home / "projects"
@@ -119,3 +246,22 @@ print(f"Projects directory: {projects_dir}")
 # 5. Git identity and hooks are now configured by app.py's _setup_git_config()
 # (runs directly in Python before setup_claude.py, writes ~/.gitconfig and ~/.githooks/)
 print("Git identity and hooks: configured by app.py (skipping here)")
+
+# 6. Restore Claude Code auto-memory ("brain") from workspace if present.
+# This makes accumulated memories survive app redeployment. Best-effort —
+# failures are logged but don't break startup.
+if token:
+    brain_sync = Path(__file__).parent / "claude_brain_sync.py"
+    if brain_sync.exists():
+        try:
+            result = subprocess.run(
+                [sys.executable, str(brain_sync), "pull"],
+                capture_output=True, text=True, timeout=60,
+                env={**os.environ, "HOME": str(home)},
+            )
+            if result.stdout:
+                print(result.stdout.strip())
+            if result.returncode != 0 and result.stderr:
+                print(f"brain-sync pull warning: {result.stderr.strip()}")
+        except Exception as e:
+            print(f"brain-sync pull skipped: {e}")

@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Coding Agents | Databricks</title>
+  <style>
+    :root {
+      --dbx-red: #FF3621;
+      --dbx-red-hover: #E02E1B;
+      --dbx-red-light: rgba(255, 54, 33, 0.1);
+      --dbx-dark: #0D1117;
+      --dbx-surface: #161B22;
+      --dbx-surface-2: #1C2128;
+      --dbx-border: #2D333B;
+      --dbx-text: #E6EDF3;
+      --dbx-text-muted: #8B949E;
+      --dbx-green: #3FB950;
+      --dbx-yellow: #D29922;
+      --dbx-blue: #58A6FF;
+      --dbx-error: #F85149;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: var(--dbx-dark);
+      color: var(--dbx-text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      min-height: 100vh;
+    }
+
+    .topbar {
+      background: var(--dbx-surface);
+      border-bottom: 1px solid var(--dbx-border);
+      padding: 12px 24px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .topbar-left { display: flex; align-items: center; gap: 12px; }
+    .dbx-logo {
+      width: 32px; height: 32px;
+      background: var(--dbx-red);
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .dbx-logo svg { width: 20px; height: 20px; }
+    .topbar-title { font-size: 15px; font-weight: 600; }
+    .topbar-user { font-size: 13px; color: var(--dbx-text-muted); }
+
+    .main { max-width: 720px; margin: 0 auto; padding: 48px 24px; }
+
+    .hero { margin-bottom: 40px; }
+    .hero h1 { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+    .hero p { color: var(--dbx-text-muted); font-size: 15px; line-height: 1.5; }
+
+    .card {
+      background: var(--dbx-surface);
+      border: 1px solid var(--dbx-border);
+      border-radius: 10px;
+      padding: 28px;
+      margin-bottom: 24px;
+    }
+    .card-header {
+      font-size: 16px; font-weight: 600; margin-bottom: 20px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .card-header .badge {
+      font-size: 11px; font-weight: 500;
+      background: var(--dbx-red-light); color: var(--dbx-red);
+      padding: 2px 8px; border-radius: 10px;
+    }
+
+    label { display: block; font-size: 13px; font-weight: 500; color: var(--dbx-text-muted); margin-bottom: 6px; }
+    input[type="email"] {
+      width: 100%; padding: 10px 14px; font-size: 14px;
+      background: var(--dbx-dark); border: 1px solid var(--dbx-border);
+      border-radius: 6px; color: var(--dbx-text); outline: none;
+      transition: border-color 0.15s;
+    }
+    input[type="email"]:focus { border-color: var(--dbx-red); }
+    input[type="email"]::placeholder { color: #484F58; }
+    textarea:focus { border-color: var(--dbx-red); }
+    textarea::placeholder { color: #484F58; }
+    .field-help { font-size: 12px; color: var(--dbx-text-muted); margin-top: 6px; line-height: 1.4; }
+    .field-help strong { color: var(--dbx-text); }
+
+    .btn-primary {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      width: 100%; padding: 12px 24px; font-size: 15px; font-weight: 600;
+      color: #fff; background: var(--dbx-red); border: none; border-radius: 6px;
+      cursor: pointer; transition: background 0.15s; margin-top: 20px;
+    }
+    .btn-primary:hover { background: var(--dbx-red-hover); }
+    .btn-primary:disabled { background: #2D333B; color: #484F58; cursor: not-allowed; }
+    .btn-primary svg { width: 18px; height: 18px; fill: currentColor; }
+
+    #status {
+      margin-top: 20px; font-size: 13px;
+      font-family: 'SF Mono', SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+      background: var(--dbx-dark); border: 1px solid var(--dbx-border);
+      border-radius: 6px; padding: 16px;
+      display: none; line-height: 1.6;
+    }
+    .status-success { color: var(--dbx-green); border-color: rgba(63,185,80,0.3); }
+    .status-error { color: var(--dbx-error); border-color: rgba(248,81,73,0.3); }
+    .status-progress { color: var(--dbx-text-muted); border-color: rgba(88,166,255,0.3); }
+    .status-success a { color: var(--dbx-green); }
+
+    .step-list { list-style: none; padding: 0; margin: 0; }
+    .step-list li {
+      padding: 4px 0;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .step-icon { width: 18px; text-align: center; flex-shrink: 0; }
+    .step-done .step-icon { color: var(--dbx-green); }
+    .step-active .step-icon { color: var(--dbx-blue); }
+    .step-error .step-icon { color: var(--dbx-error); }
+    .step-active .step-msg { color: var(--dbx-text); }
+    .step-done .step-msg { color: var(--dbx-text-muted); }
+
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead th {
+      text-align: left; padding: 10px 12px; font-weight: 600; font-size: 12px;
+      text-transform: uppercase; letter-spacing: 0.5px;
+      color: var(--dbx-text-muted); border-bottom: 1px solid var(--dbx-border);
+    }
+    tbody td { padding: 10px 12px; border-bottom: 1px solid rgba(45,51,59,0.5); }
+    tbody tr:hover { background: var(--dbx-surface-2); }
+    td a { color: var(--dbx-red); text-decoration: none; font-weight: 500; }
+    td a:hover { text-decoration: underline; }
+    .state-running { color: var(--dbx-green); font-weight: 500; }
+    .state-provisioning { color: var(--dbx-blue); font-weight: 500; }
+    .state-other { color: var(--dbx-yellow); }
+    .empty-state { color: var(--dbx-text-muted); text-align: center; padding: 24px; }
+
+    .spinner {
+      display: inline-block; width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,0.2); border-top-color: #fff;
+      border-radius: 50%; animation: spin 0.6s linear infinite;
+    }
+    .spinner-sm {
+      display: inline-block; width: 12px; height: 12px;
+      border: 2px solid rgba(88,166,255,0.3); border-top-color: var(--dbx-blue);
+      border-radius: 50%; animation: spin 0.6s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="dbx-logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+      </svg>
+    </div>
+    <span class="topbar-title">Coding Agents</span>
+  </div>
+  <span class="topbar-user" id="user-email"></span>
+</div>
+
+<div class="main">
+  <div class="hero">
+    <h1>Deploy Your Coding Agent</h1>
+    <p>Get a personal AI-powered coding environment on Databricks. One click and we'll provision everything for you.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      Deploy
+      <span class="badge">One-click</span>
+    </div>
+    <label for="email">Deploy for</label>
+    <input type="email" id="email" autocomplete="off" />
+    <p class="field-help">
+      App will be named <strong id="app-name-preview"></strong>.<br>
+      No tokens needed &mdash; change the email to provision for another user.
+    </p>
+    <button class="btn-primary" id="btn" onclick="deploy()">
+      <svg viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+      Deploy My Coding Agent
+    </button>
+    <div id="active-provisions" style="margin-top:20px;display:flex;flex-direction:column;gap:8px;"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      Bulk Deploy
+      <span class="badge">Paste list</span>
+    </div>
+    <label for="bulk-emails">Email addresses (one per line, comma, or semicolon separated)</label>
+    <textarea id="bulk-emails" rows="6" style="width:100%;padding:10px 14px;font-size:13px;font-family:'SF Mono',SFMono-Regular,Consolas,monospace;background:var(--dbx-dark);border:1px solid var(--dbx-border);border-radius:6px;color:var(--dbx-text);outline:none;resize:vertical;line-height:1.5;" placeholder="user1@example.com&#10;user2@example.com&#10;user3@example.com"></textarea>
+    <p class="field-help">
+      Paste attendee emails from Outlook, Teams, or a spreadsheet. Names and angle brackets are stripped automatically.
+      <strong id="bulk-count"></strong>
+    </p>
+    <button class="btn-primary" id="btn-bulk" onclick="deployBulk()">
+      <svg viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+      Deploy All
+    </button>
+    <div id="bulk-provisions" style="margin-top:20px;display:flex;flex-direction:column;gap:8px;"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-header" style="justify-content:space-between;">
+      Spawned Apps
+      <button id="btn-redeploy-all" onclick="redeployAll()" style="font-size:12px;padding:5px 12px;background:var(--dbx-blue);color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:500;">Redeploy All</button>
+    </div>
+    <div id="redeploy-status" style="display:none;font-size:13px;padding:12px;margin-bottom:12px;background:var(--dbx-dark);border:1px solid var(--dbx-border);border-radius:6px;font-family:'SF Mono',SFMono-Regular,Consolas,monospace;"></div>
+    <div id="apps-loading" class="empty-state">Loading...</div>
+    <table id="apps-table" style="display:none;">
+      <thead><tr><th>App</th><th>Owner</th><th>State</th><th>Created</th></tr></thead>
+      <tbody id="apps-body"></tbody>
+    </table>
+    <div id="apps-empty" style="display:none;" class="empty-state">No apps have been spawned yet.</div>
+  </div>
+</div>
+
+<script>
+const userEmail = document.body.getAttribute('data-email') || 'unknown';
+const appName = document.body.getAttribute('data-app-name') || 'coding-agents-you';
+document.getElementById('user-email').textContent = userEmail;
+
+const emailInput = document.getElementById('email');
+emailInput.value = userEmail;
+updateAppNamePreview();
+
+function appNameFromEmail(email) {
+  const slug = email.split('@')[0].replace(/[._]/g, '-').toLowerCase();
+  return 'coding-agents-' + slug;
+}
+
+function updateAppNamePreview() {
+  const email = emailInput.value.trim();
+  document.getElementById('app-name-preview').textContent = email ? appNameFromEmail(email) : 'coding-agents-...';
+}
+emailInput.addEventListener('input', updateAppNamePreview);
+
+// Track active provisions by app name -> poll timer
+const activePollers = {};
+
+async function deploy() {
+  const email = emailInput.value.trim();
+  if (!email) { alert('Please enter an email address.'); return; }
+  const btn = document.getElementById('btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Starting...';
+
+  try {
+    const resp = await fetch('/api/provision', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email })
+    });
+    const data = await resp.json();
+
+    if (!data.success) {
+      alert('Error: ' + (data.error || 'Unknown error'));
+      resetBtn();
+      return;
+    }
+
+    if (data.already_running) {
+      addProvisionCard(data.app_name, email, 'success',
+        '&#10003; Already running &mdash; <a href="' + data.app_url + '" style="color:var(--dbx-green);">Open</a>');
+      resetBtn();
+      loadApps();
+      return;
+    }
+
+    if (data.already_in_progress) {
+      // Already tracking — just reset the button
+      resetBtn();
+      return;
+    }
+
+    // Add a card and start polling
+    addProvisionCard(data.app_name, email, 'progress', 'Starting...');
+    pollProvisionStatus(data.app_name);
+    resetBtn();
+
+  } catch (e) {
+    alert('Request failed: ' + e.message);
+    resetBtn();
+  }
+}
+
+function addProvisionCard(appName, email, state, html, container) {
+  container = container || document.getElementById('active-provisions');
+  let card = document.getElementById('prov-' + appName);
+  if (!card) {
+    card = document.createElement('div');
+    card.id = 'prov-' + appName;
+    card.style.cssText = 'font-size:13px;font-family:"SF Mono",SFMono-Regular,Consolas,monospace;background:var(--dbx-dark);border:1px solid var(--dbx-border);border-radius:6px;padding:12px 16px;line-height:1.6;';
+    container.prepend(card);
+  }
+  if (state === 'success') {
+    card.style.borderColor = 'rgba(63,185,80,0.3)';
+    card.style.color = 'var(--dbx-green)';
+  } else if (state === 'error') {
+    card.style.borderColor = 'rgba(248,81,73,0.3)';
+    card.style.color = 'var(--dbx-error)';
+  } else {
+    card.style.borderColor = 'rgba(88,166,255,0.3)';
+    card.style.color = 'var(--dbx-text-muted)';
+  }
+  card.innerHTML = '<div style="font-weight:600;margin-bottom:4px;color:var(--dbx-text);font-size:12px;">' + appName + ' <span style="font-weight:400;color:var(--dbx-text-muted);">(' + email + ')</span></div>' + html;
+  return card;
+}
+
+function pollProvisionStatus(appName, container) {
+  if (activePollers[appName]) clearInterval(activePollers[appName]);
+
+  activePollers[appName] = setInterval(async () => {
+    try {
+      const resp = await fetch('/api/provision-status/' + encodeURIComponent(appName));
+      const data = await resp.json();
+      if (!data.found) return;
+
+      const email = data.email || appName;
+
+      if (data.status === 'complete') {
+        clearInterval(activePollers[appName]);
+        delete activePollers[appName];
+        const url = data.app_url || '';
+        addProvisionCard(appName, email, 'success',
+          renderStepsHTML(data.steps, true)
+          + (url ? '<a href="' + url + '" style="color:var(--dbx-green);font-weight:600;">&rarr; Open</a>' : ''),
+          container);
+        loadApps();
+      } else if (data.status === 'error') {
+        clearInterval(activePollers[appName]);
+        delete activePollers[appName];
+        addProvisionCard(appName, email, 'error', renderStepsHTML(data.steps, false), container);
+      } else {
+        addProvisionCard(appName, email, 'progress', renderStepsHTML(data.steps, false), container);
+      }
+    } catch (e) { /* keep polling */ }
+  }, 3000);
+}
+
+function renderStepsHTML(steps, finished) {
+  if (!steps || steps.length === 0) return 'Starting...';
+  let html = '<ul class="step-list">';
+  steps.forEach((s, i) => {
+    const isLast = i === steps.length - 1;
+    const isError = s.status === 'error';
+    let cls = 'step-done';
+    let icon = '&#10003;';
+    if (isError) {
+      cls = 'step-error';
+      icon = '&#10007;';
+    } else if (isLast && !finished) {
+      cls = 'step-active';
+      icon = '<span class="spinner-sm"></span>';
+    }
+    html += '<li class="' + cls + '"><span class="step-icon">' + icon + '</span><span class="step-msg">' + s.message + '</span></li>';
+  });
+  html += '</ul>';
+  return html;
+}
+
+function resetBtn() {
+  const btn = document.getElementById('btn');
+  btn.disabled = false;
+  btn.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg> Deploy My Coding Agent';
+}
+
+async function loadApps() {
+  try {
+    const resp = await fetch('/api/apps');
+    const data = await resp.json();
+    document.getElementById('apps-loading').style.display = 'none';
+    if (!data.apps || data.apps.length === 0) {
+      document.getElementById('apps-empty').style.display = 'block';
+      document.getElementById('apps-table').style.display = 'none';
+      return;
+    }
+    const tbody = document.getElementById('apps-body');
+    tbody.innerHTML = '';
+    data.apps.forEach(a => {
+      let stateClass = 'state-other';
+      let stateText = a.state;
+      if (a.state === 'RUNNING') {
+        stateClass = 'state-running';
+      } else if (a.state.startsWith('PROVISIONING:')) {
+        stateClass = 'state-provisioning';
+        stateText = a.state.replace('PROVISIONING: ', '');
+      }
+      const created = a.created ? new Date(a.created).toLocaleDateString() : '';
+      const tr = document.createElement('tr');
+      const nameCell = a.url
+        ? '<a href="' + a.url + '" target="_blank">' + a.name + '</a>'
+        : a.name;
+      tr.innerHTML =
+        '<td>' + nameCell + '</td>'
+        + '<td>' + a.creator + '</td>'
+        + '<td class="' + stateClass + '">' + stateText + '</td>'
+        + '<td>' + created + '</td>';
+      tbody.appendChild(tr);
+    });
+    document.getElementById('apps-empty').style.display = 'none';
+    document.getElementById('apps-table').style.display = 'table';
+  } catch(e) {
+    document.getElementById('apps-loading').textContent = 'Failed to load apps.';
+  }
+}
+
+let redeployPollTimer = null;
+
+async function redeployAll() {
+  const btn = document.getElementById('btn-redeploy-all');
+  const statusDiv = document.getElementById('redeploy-status');
+  if (!confirm('Redeploy all spawned apps from the latest template?')) return;
+
+  btn.disabled = true;
+  btn.textContent = 'Starting...';
+  statusDiv.style.display = 'block';
+  statusDiv.style.color = 'var(--dbx-blue)';
+  statusDiv.style.borderColor = 'rgba(88,166,255,0.3)';
+  statusDiv.textContent = 'Triggering redeploy...';
+
+  try {
+    const resp = await fetch('/api/redeploy-all', { method: 'POST' });
+    const data = await resp.json();
+    if (data.error) {
+      statusDiv.style.color = 'var(--dbx-error)';
+      statusDiv.style.borderColor = 'rgba(248,81,73,0.3)';
+      statusDiv.textContent = 'Error: ' + data.error;
+      btn.disabled = false;
+      btn.textContent = 'Redeploy All';
+      return;
+    }
+    pollRedeployStatus();
+  } catch (e) {
+    statusDiv.style.color = 'var(--dbx-error)';
+    statusDiv.textContent = 'Request failed: ' + e.message;
+    btn.disabled = false;
+    btn.textContent = 'Redeploy All';
+  }
+}
+
+function pollRedeployStatus() {
+  if (redeployPollTimer) clearInterval(redeployPollTimer);
+  redeployPollTimer = setInterval(async () => {
+    try {
+      const resp = await fetch('/api/redeploy-all/status');
+      const data = await resp.json();
+      if (!data.active) return;
+
+      const statusDiv = document.getElementById('redeploy-status');
+      const btn = document.getElementById('btn-redeploy-all');
+      const done = data.apps ? data.apps.filter(a => a.status === 'deployed').length : 0;
+      const errored = data.apps ? data.apps.filter(a => a.status === 'error').length : 0;
+      const total = data.total || 0;
+
+      if (data.status === 'in_progress') {
+        statusDiv.style.color = 'var(--dbx-blue)';
+        statusDiv.style.borderColor = 'rgba(88,166,255,0.3)';
+        btn.textContent = done + '/' + total + ' deployed';
+        let html = 'Redeploying: ' + done + '/' + total + ' complete';
+        if (errored > 0) html += ', ' + errored + ' failed';
+        if (data.apps) {
+          html += '<br>';
+          data.apps.forEach(a => {
+            const icon = a.status === 'deployed' ? '<span style="color:var(--dbx-green)">✓</span>'
+              : a.status === 'error' ? '<span style="color:var(--dbx-error)">✗</span>'
+              : a.status === 'deploying' ? '<span class="spinner-sm"></span>'
+              : '<span style="color:var(--dbx-text-muted)">○</span>';
+            html += icon + ' ' + a.name;
+            if (a.status === 'error' && a.error) html += ' <span style="color:var(--dbx-text-muted);font-size:11px;">(' + a.error.substring(0, 80) + ')</span>';
+            html += '<br>';
+          });
+        }
+        statusDiv.innerHTML = html;
+      } else if (data.status === 'complete') {
+        clearInterval(redeployPollTimer);
+        redeployPollTimer = null;
+        statusDiv.style.color = 'var(--dbx-green)';
+        statusDiv.style.borderColor = 'rgba(63,185,80,0.3)';
+        let completeHtml = '✓ All ' + total + ' apps redeployed' + (errored > 0 ? ' (' + errored + ' failed)' : '');
+        if (errored > 0 && data.apps) {
+          completeHtml += '<br>';
+          data.apps.filter(a => a.status === 'error').forEach(a => {
+            completeHtml += '<span style="color:var(--dbx-error)">✗ ' + a.name + '</span> <span style="color:var(--dbx-text-muted);font-size:11px;">' + (a.error || '') + '</span><br>';
+          });
+        }
+        statusDiv.innerHTML = completeHtml;
+        btn.disabled = false;
+        btn.textContent = 'Redeploy All';
+        loadApps();
+      } else if (data.status === 'error') {
+        clearInterval(redeployPollTimer);
+        redeployPollTimer = null;
+        statusDiv.style.color = 'var(--dbx-error)';
+        statusDiv.style.borderColor = 'rgba(248,81,73,0.3)';
+        statusDiv.textContent = 'Error: ' + (data.error || 'Unknown error');
+        btn.disabled = false;
+        btn.textContent = 'Redeploy All';
+      }
+    } catch (e) { /* keep polling */ }
+  }, 3000);
+}
+
+// --- Bulk deploy ---
+const bulkTextarea = document.getElementById('bulk-emails');
+const bulkCountEl = document.getElementById('bulk-count');
+
+function parseBulkEmails(raw) {
+  // Split on newlines, commas, or semicolons
+  const parts = raw.split(/[\n,;]+/);
+  const emails = [];
+  for (const part of parts) {
+    let s = part.trim();
+    if (!s) continue;
+    // Strip "Display Name <email>" format from Outlook
+    const match = s.match(/<([^>]+)>/);
+    if (match) s = match[1].trim();
+    // Strip surrounding quotes
+    s = s.replace(/^["']|["']$/g, '').trim();
+    if (s && s.includes('@')) emails.push(s);
+  }
+  // Deduplicate (case-insensitive)
+  const seen = new Set();
+  return emails.filter(e => {
+    const lower = e.toLowerCase();
+    if (seen.has(lower)) return false;
+    seen.add(lower);
+    return true;
+  });
+}
+
+bulkTextarea.addEventListener('input', () => {
+  const emails = parseBulkEmails(bulkTextarea.value);
+  bulkCountEl.textContent = emails.length ? emails.length + ' email' + (emails.length === 1 ? '' : 's') + ' detected' : '';
+});
+
+async function deployBulk() {
+  const emails = parseBulkEmails(bulkTextarea.value);
+  if (emails.length === 0) { alert('No valid email addresses found.'); return; }
+  if (!confirm('Deploy coding agents for ' + emails.length + ' users?')) return;
+
+  const btn = document.getElementById('btn-bulk');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Deploying ' + emails.length + ' apps...';
+
+  try {
+    const resp = await fetch('/api/provision-bulk', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ emails: emails })
+    });
+    const data = await resp.json();
+
+    if (!data.success) {
+      alert('Error: ' + (data.error || 'Unknown error'));
+      resetBulkBtn();
+      return;
+    }
+
+    // Create progress cards and start polling for each
+    const container = document.getElementById('bulk-provisions');
+    for (const r of (data.apps || [])) {
+      if (r.status === 'already_running') {
+        addProvisionCard(r.app_name, r.email, 'success', '&#10003; Already running', container);
+      } else if (r.status === 'already_in_progress') {
+        addProvisionCard(r.app_name, r.email, 'progress', 'Already in progress...', container);
+        pollProvisionStatus(r.app_name, container);
+      } else {
+        addProvisionCard(r.app_name, r.email, 'progress', 'Starting...', container);
+        pollProvisionStatus(r.app_name, container);
+      }
+    }
+
+    resetBulkBtn();
+    loadApps();
+
+  } catch (e) {
+    alert('Request failed: ' + e.message);
+    resetBulkBtn();
+  }
+}
+
+function resetBulkBtn() {
+  const btn = document.getElementById('btn-bulk');
+  btn.disabled = false;
+  btn.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg> Deploy All';
+}
+
+// Auto-refresh apps table every 10s
+loadApps();
+setInterval(loadApps, 10000);
+</script>
+</body>
+</html>

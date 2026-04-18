@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Grocery Data Quiz</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --lava: #FF3621; --lava-light: #FF5F46; --navy: #1B3139; --ink: #0B2026;
+      --teal: #1B5162; --green: #00A972; --oat: #F9F7F4; --oat-med: #EEEDE9;
+      --white: #FFFFFF; --amber: #FEAB03; --indigo: #4259FE; --coles: #ED1C24;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; overflow: hidden; }
+    body { font-family: 'DM Sans', sans-serif; background: var(--ink); color: white; }
+
+    /* --- VIEWS --- */
+    .view { display: none; height: 100vh; flex-direction: column; }
+    .view.active { display: flex; }
+
+    /* ================================================================
+       JOIN VIEW (default — teams enter their name here)
+       ================================================================ */
+    #join-view {
+      align-items: center; justify-content: center; gap: 1.5rem;
+      background: linear-gradient(135deg, var(--navy), var(--ink));
+      text-align: center; padding: 2rem;
+    }
+    #join-view h1 { font-size: clamp(2rem, 5vw, 3.5rem); font-weight: 700; letter-spacing: -0.02em; }
+    #join-view .sub { color: rgba(255,255,255,0.5); font-size: 1rem; }
+    #join-input {
+      font-family: 'DM Sans', sans-serif; font-size: 1.3rem; font-weight: 700;
+      padding: 1rem 1.5rem; border-radius: 12px; border: 2px solid rgba(255,255,255,0.2);
+      background: rgba(255,255,255,0.06); color: white; text-align: center;
+      width: 100%; max-width: 360px; outline: none; transition: border-color 0.2s;
+    }
+    #join-input:focus { border-color: var(--lava); }
+    #join-input::placeholder { color: rgba(255,255,255,0.3); }
+    .join-btn {
+      padding: 1rem 3rem; font-family: 'DM Sans', sans-serif; font-size: 1.2rem; font-weight: 700;
+      background: var(--lava); color: white; border: none; border-radius: 12px;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .join-btn:hover { background: #E02E1A; transform: scale(1.05); }
+    .join-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+    .host-link {
+      font-family: 'DM Mono', monospace; font-size: 0.75rem;
+      color: rgba(255,255,255,0.3); cursor: pointer; margin-top: 1rem;
+      border-bottom: 1px dashed rgba(255,255,255,0.2); padding-bottom: 2px;
+    }
+    .host-link:hover { color: var(--lava-light); }
+    .team-count { font-family: 'DM Mono', monospace; font-size: 0.85rem; color: var(--green); }
+
+    /* ================================================================
+       PLAYER VIEW (mobile-first — teams answer here)
+       ================================================================ */
+    #player-view { background: var(--ink); }
+
+    .p-header {
+      padding: 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center;
+      background: var(--navy); border-bottom: 2px solid var(--lava);
+    }
+    .p-team { font-weight: 700; font-size: 1rem; }
+    .p-score { font-family: 'DM Mono', monospace; font-size: 0.9rem; color: var(--green); }
+    .p-timer {
+      font-family: 'DM Mono', monospace; font-size: 1.5rem; font-weight: 700;
+      color: var(--green); min-width: 40px; text-align: center;
+    }
+    .p-timer.warn { color: var(--amber); }
+    .p-timer.danger { color: var(--lava); animation: pulse 0.5s infinite; }
+    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+
+    .p-body { flex: 1; display: flex; flex-direction: column; padding: 1.5rem; gap: 1rem; overflow-y: auto; }
+    .p-qnum { font-family: 'DM Mono', monospace; font-size: 0.75rem; color: var(--lava-light); letter-spacing: 0.1em; text-transform: uppercase; }
+    .p-qtext { font-size: clamp(1.1rem, 3vw, 1.6rem); font-weight: 700; line-height: 1.3; }
+    .p-options { display: flex; flex-direction: column; gap: 0.75rem; margin-top: auto; }
+
+    .p-opt {
+      padding: 1.2rem 1.5rem; border-radius: 14px; font-size: 1.1rem; font-weight: 500;
+      border: 2px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.05);
+      color: white; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 1rem;
+      -webkit-tap-highlight-color: transparent; user-select: none;
+    }
+    .p-opt:active { transform: scale(0.97); }
+    .p-opt .key {
+      width: 36px; height: 36px; border-radius: 8px; display: flex;
+      align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0; font-size: 0.9rem;
+    }
+    .p-opt:nth-child(1) .key { background: var(--lava); }
+    .p-opt:nth-child(2) .key { background: var(--indigo); }
+    .p-opt:nth-child(3) .key { background: var(--green); }
+    .p-opt:nth-child(4) .key { background: var(--amber); color: var(--ink); }
+    .p-opt.selected { border-color: var(--amber); background: rgba(254,171,3,0.15); }
+    .p-opt.correct { border-color: var(--green); background: rgba(0,169,114,0.2); }
+    .p-opt.wrong { opacity: 0.3; }
+    .p-opt.wrong.selected { border-color: var(--lava); background: rgba(255,54,33,0.15); opacity: 1; }
+
+    .p-waiting {
+      flex: 1; display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 1rem; text-align: center;
+    }
+    .p-waiting .emoji { font-size: 3rem; }
+    .p-waiting h2 { font-size: 1.5rem; }
+    .p-waiting p { color: rgba(255,255,255,0.5); }
+
+    .p-result-banner {
+      padding: 0.75rem 1rem; border-radius: 10px; text-align: center;
+      font-weight: 700; font-size: 0.95rem; display: none;
+    }
+    .p-result-banner.show { display: block; animation: fadeUp 0.3s ease; }
+    .p-result-banner.correct-banner { background: rgba(0,169,114,0.2); color: #5cd6a8; border: 1px solid rgba(0,169,114,0.3); }
+    .p-result-banner.wrong-banner { background: rgba(255,54,33,0.15); color: #ff7a6a; border: 1px solid rgba(255,54,33,0.3); }
+    @keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+
+    /* ================================================================
+       HOST VIEW (projected on big screen)
+       ================================================================ */
+    #host-view { background: var(--ink); }
+
+    .h-header {
+      padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center;
+      background: var(--navy); border-bottom: 3px solid var(--lava);
+    }
+    .h-logo { font-family: 'DM Mono', monospace; font-size: 0.8rem; color: var(--lava-light); letter-spacing: 0.1em; }
+    .h-qinfo { font-family: 'DM Mono', monospace; font-size: 0.85rem; color: rgba(255,255,255,0.5); }
+    .h-timer {
+      font-family: 'DM Mono', monospace; font-size: 2.5rem; font-weight: 700; color: var(--green);
+    }
+    .h-timer.warn { color: var(--amber); }
+    .h-timer.danger { color: var(--lava); animation: pulse 0.5s infinite; }
+
+    .h-body {
+      flex: 1; display: flex; padding: 2rem 3rem; gap: 2.5rem; overflow: hidden;
+    }
+    .h-main { flex: 3; display: flex; flex-direction: column; justify-content: center; gap: 2rem; }
+    .h-sidebar { flex: 1; min-width: 240px; max-width: 320px; display: flex; flex-direction: column; gap: 1rem; }
+
+    .h-category { font-family: 'DM Mono', monospace; font-size: 0.8rem; color: var(--lava-light); letter-spacing: 0.12em; text-transform: uppercase; }
+    .h-question { font-size: clamp(1.8rem, 3.5vw, 3rem); font-weight: 700; line-height: 1.25; }
+    .h-options { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+
+    .h-opt {
+      padding: 1.2rem 1.5rem; border-radius: 14px; font-size: clamp(0.95rem, 1.5vw, 1.2rem); font-weight: 500;
+      border: 2px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.04);
+      color: white; display: flex; align-items: center; gap: 0.75rem; transition: all 0.3s;
+    }
+    .h-opt .key {
+      width: 40px; height: 40px; border-radius: 10px; display: flex;
+      align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0;
+    }
+    .h-opt:nth-child(1) .key { background: var(--lava); }
+    .h-opt:nth-child(2) .key { background: var(--indigo); }
+    .h-opt:nth-child(3) .key { background: var(--green); }
+    .h-opt:nth-child(4) .key { background: var(--amber); color: var(--ink); }
+    .h-opt.correct { border-color: var(--green); background: rgba(0,169,114,0.2); }
+    .h-opt.wrong { opacity: 0.3; }
+
+    .h-explanation {
+      font-size: 1.1rem; color: rgba(255,255,255,0.7); line-height: 1.5;
+      padding: 1rem 1.5rem; background: rgba(255,255,255,0.04); border-radius: 10px;
+      border-left: 3px solid var(--green); display: none;
+    }
+    .h-explanation.show { display: block; animation: fadeUp 0.4s ease; }
+
+    /* Leaderboard */
+    .lb-title {
+      font-family: 'DM Mono', monospace; font-size: 0.7rem; letter-spacing: 0.12em;
+      text-transform: uppercase; color: rgba(255,255,255,0.4); margin-bottom: 0.5rem;
+    }
+    .lb-list { display: flex; flex-direction: column; gap: 0.4rem; overflow-y: auto; flex: 1; }
+    .lb-team {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 0.6rem 0.8rem; border-radius: 8px; background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.06); font-size: 0.9rem; transition: all 0.3s;
+    }
+    .lb-team:first-child { background: rgba(255,54,33,0.1); border-color: rgba(255,54,33,0.2); }
+    .lb-rank { font-family: 'DM Mono', monospace; font-weight: 700; color: var(--lava-light); min-width: 1.5rem; }
+    .lb-name { font-weight: 500; flex: 1; margin: 0 0.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .lb-pts { font-family: 'DM Mono', monospace; font-weight: 700; color: var(--green); font-size: 0.85rem; }
+    .lb-answered {
+      font-family: 'DM Mono', monospace; font-size: 0.7rem; color: rgba(255,255,255,0.3);
+      text-align: center; padding-top: 0.5rem;
+    }
+
+    /* Host controls */
+    .h-controls {
+      padding: 0.75rem 2rem; display: flex; gap: 0.75rem; justify-content: center;
+      background: var(--navy);
+    }
+    .ctrl-btn {
+      padding: 0.6rem 1.5rem; font-family: 'DM Sans', sans-serif; font-size: 0.9rem; font-weight: 700;
+      border: none; border-radius: 8px; cursor: pointer; transition: all 0.2s; color: white;
+    }
+    .ctrl-btn.primary { background: var(--lava); }
+    .ctrl-btn.primary:hover { background: #E02E1A; }
+    .ctrl-btn.secondary { background: rgba(255,255,255,0.1); }
+    .ctrl-btn.secondary:hover { background: rgba(255,255,255,0.2); }
+    .ctrl-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    /* Host lobby */
+    .h-lobby {
+      flex: 1; display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 2rem; text-align: center;
+    }
+    .h-lobby h1 { font-size: clamp(2.5rem, 5vw, 4.5rem); font-weight: 700; }
+    .h-lobby .team-grid {
+      display: flex; flex-wrap: wrap; gap: 0.75rem; justify-content: center; max-width: 700px;
+    }
+    .h-lobby .team-chip {
+      padding: 0.5rem 1.2rem; border-radius: 100px; font-weight: 600; font-size: 1rem;
+      background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+      animation: fadeUp 0.3s ease;
+    }
+
+    /* Host results */
+    .h-results {
+      flex: 1; display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 1.5rem; text-align: center;
+    }
+    .h-results h1 { font-size: clamp(2rem, 4vw, 3.5rem); }
+    .podium { display: flex; gap: 1.5rem; align-items: flex-end; margin-top: 1rem; }
+    .podium-item {
+      display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
+    }
+    .podium-bar {
+      width: 120px; border-radius: 12px 12px 0 0; display: flex;
+      align-items: flex-end; justify-content: center; padding-bottom: 1rem;
+      font-family: 'DM Mono', monospace; font-weight: 700; font-size: 1.5rem;
+    }
+    .podium-name { font-weight: 700; font-size: 1.1rem; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .podium-place { font-family: 'DM Mono', monospace; font-size: 0.8rem; color: rgba(255,255,255,0.5); }
+  </style>
+</head>
+<body>
+
+  <!-- JOIN VIEW -->
+  <div id="join-view" class="view active">
+    <div style="font-size:2.5rem;margin-bottom:0.5rem;">&#x1F6D2;</div>
+    <h1>Grocery Data Quiz</h1>
+    <p class="sub">Enter your team name to join</p>
+    <input id="join-input" type="text" placeholder="Team name..." maxlength="30" autocomplete="off">
+    <button class="join-btn" id="join-btn" onclick="joinTeam()">Join Quiz</button>
+    <div class="team-count" id="join-team-count"></div>
+    <div class="host-link" onclick="goHost()">I'm the facilitator &rarr; Host view</div>
+  </div>
+
+  <!-- PLAYER VIEW -->
+  <div id="player-view" class="view">
+    <div class="p-header">
+      <div>
+        <div class="p-team" id="p-team-name">Team</div>
+        <div class="p-score" id="p-score">0 pts</div>
+      </div>
+      <div class="p-timer" id="p-timer">30</div>
+    </div>
+    <div class="p-body" id="p-body"></div>
+  </div>
+
+  <!-- HOST VIEW -->
+  <div id="host-view" class="view">
+    <div class="h-header">
+      <div class="h-logo">GROCERY DATA QUIZ</div>
+      <div class="h-qinfo" id="h-qinfo"></div>
+      <div class="h-timer" id="h-timer">30</div>
+    </div>
+    <div class="h-body" id="h-body"></div>
+    <div class="h-controls" id="h-controls"></div>
+  </div>
+
+  <script>
+    /* ============================================================
+       STATE
+       ============================================================ */
+    let mode = null; // 'player' | 'host'
+    let teamName = '';
+    let state = {};
+    let myAnswer = null;
+    let pollInterval = null;
+
+    const $ = id => document.getElementById(id);
+
+    /* ============================================================
+       ROUTING
+       ============================================================ */
+    const path = window.location.pathname;
+    if (path === '/host') { goHost(); }
+    else if (path === '/play' && localStorage.getItem('quizTeam')) {
+      teamName = localStorage.getItem('quizTeam');
+      goPlayer();
+    }
+
+    /* ============================================================
+       JOIN
+       ============================================================ */
+    $('join-input').addEventListener('keydown', e => { if (e.key === 'Enter') joinTeam(); });
+
+    async function joinTeam() {
+      const name = $('join-input').value.trim();
+      if (!name) return;
+      $('join-btn').disabled = true;
+      try {
+        const res = await fetch('/api/teams', {
+          method: 'POST', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({name})
+        });
+        if (!res.ok) throw new Error('Failed to join');
+        teamName = name;
+        localStorage.setItem('quizTeam', name);
+        goPlayer();
+      } catch (e) {
+        alert('Could not join: ' + e.message);
+        $('join-btn').disabled = false;
+      }
+    }
+
+    function goPlayer() {
+      mode = 'player';
+      showView('player-view');
+      $('p-team-name').textContent = teamName;
+      history.replaceState(null, '', '/play');
+      startPolling();
+    }
+
+    function goHost() {
+      mode = 'host';
+      showView('host-view');
+      history.replaceState(null, '', '/host');
+      startPolling();
+    }
+
+    function showView(id) {
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      $(id).classList.add('active');
+    }
+
+    /* ============================================================
+       POLLING
+       ============================================================ */
+    function startPolling() {
+      if (pollInterval) clearInterval(pollInterval);
+      poll();
+      pollInterval = setInterval(poll, 800);
+    }
+
+    async function poll() {
+      try {
+        const res = await fetch('/api/state');
+        const data = await res.json();
+        if (data.version !== state.version) {
+          state = data;
+          if (mode === 'player') renderPlayer();
+          else if (mode === 'host') renderHost();
+        }
+        // Update timers even without state change
+        updateTimers();
+      } catch (e) { /* retry on next tick */ }
+    }
+
+    function updateTimers() {
+      if (!state.timeLeft && state.timeLeft !== 0) return;
+      const t = state.timeLeft;
+      const cls = t <= 5 ? 'danger' : t <= 10 ? 'warn' : '';
+
+      if (mode === 'player') {
+        const el = $('p-timer');
+        el.textContent = state.phase === 'question' ? t : '';
+        el.className = 'p-timer ' + cls;
+      } else {
+        const el = $('h-timer');
+        el.textContent = state.phase === 'question' ? t : '';
+        el.className = 'h-timer ' + cls;
+      }
+    }
+
+    /* ============================================================
+       PLAYER RENDERING
+       ============================================================ */
+    function renderPlayer() {
+      const s = state;
+      const body = $('p-body');
+
+      // Find my team's score
+      const myTeam = s.leaderboard?.find(t => t.name === teamName);
+      $('p-score').textContent = myTeam ? myTeam.score + ' pts' : '0 pts';
+
+      if (s.phase === 'lobby') {
+        body.innerHTML = `<div class="p-waiting"><div class="emoji">&#x23F3;</div><h2>Waiting for host to start...</h2><p>${s.teamCount} team${s.teamCount !== 1 ? 's' : ''} joined</p></div>`;
+        myAnswer = null;
+      } else if (s.phase === 'question') {
+        const q = s.question;
+        if (!q) return;
+        const keys = ['A','B','C','D'];
+        body.innerHTML = `
+          <div class="p-qnum">Q${s.currentQuestion+1} of ${s.totalQuestions} &middot; ${q.category}</div>
+          <div class="p-qtext">${q.text}</div>
+          <div id="p-result-banner" class="p-result-banner"></div>
+          <div class="p-options" id="p-opts">
+            ${q.options.map((o,i) => `<div class="p-opt" onclick="answer(${i})"><span class="key">${keys[i]}</span><span>${o}</span></div>`).join('')}
+          </div>`;
+        if (myAnswer !== null) markPlayerAnswer(myAnswer, null);
+      } else if (s.phase === 'revealed') {
+        const q = s.question;
+        if (!q) return;
+        const keys = ['A','B','C','D'];
+        const correct = q.correct;
+        body.innerHTML = `
+          <div class="p-qnum">Q${s.currentQuestion+1} of ${s.totalQuestions} &middot; ${q.category}</div>
+          <div class="p-qtext">${q.text}</div>
+          <div id="p-result-banner" class="p-result-banner ${myAnswer === correct ? 'correct-banner' : 'wrong-banner'} show">
+            ${myAnswer === correct ? '&#x2705; Correct!' : myAnswer !== null ? '&#x274C; Wrong!' : '&#x23F0; Time\'s up!'}
+          </div>
+          <div class="p-options">
+            ${q.options.map((o,i) => {
+              let cls = 'p-opt';
+              if (i === correct) cls += ' correct';
+              else cls += ' wrong';
+              if (i === myAnswer) cls += ' selected';
+              return `<div class="${cls}"><span class="key">${keys[i]}</span><span>${o}</span></div>`;
+            }).join('')}
+          </div>
+          <div style="text-align:center;color:rgba(255,255,255,0.6);font-size:0.9rem;padding:0.5rem;">${q.explanation}</div>`;
+        myAnswer = null; // reset for next question
+      } else if (s.phase === 'results') {
+        const rank = s.leaderboard?.findIndex(t => t.name === teamName) + 1;
+        body.innerHTML = `<div class="p-waiting"><div class="emoji">&#x1F389;</div><h2>${rank === 1 ? 'You won!' : `You placed #${rank}`}</h2><p>${myTeam?.score || 0} points</p></div>`;
+      }
+    }
+
+    async function answer(idx) {
+      if (myAnswer !== null || state.phase !== 'question') return;
+      myAnswer = idx;
+      markPlayerAnswer(idx, null);
+      try {
+        await fetch('/api/answer', {
+          method: 'POST', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({team: teamName, answer: idx})
+        });
+      } catch (e) { /* best effort */ }
+    }
+
+    function markPlayerAnswer(idx) {
+      const opts = document.querySelectorAll('#p-opts .p-opt');
+      opts.forEach((o, i) => {
+        o.classList.toggle('selected', i === idx);
+        o.style.pointerEvents = 'none';
+      });
+    }
+
+    /* ============================================================
+       HOST RENDERING
+       ============================================================ */
+    function renderHost() {
+      const s = state;
+      const body = $('h-body');
+      const controls = $('h-controls');
+
+      $('h-qinfo').textContent = s.phase !== 'lobby' ? `Q${s.currentQuestion+1} / ${s.totalQuestions}` : `${s.teamCount} teams`;
+
+      if (s.phase === 'lobby') {
+        body.innerHTML = `<div class="h-lobby">
+          <div style="font-size:3rem;">&#x1F6D2;</div>
+          <h1>The Great <span style="color:var(--lava);">Grocery Data</span> Quiz</h1>
+          <p style="color:rgba(255,255,255,0.5);font-size:1.1rem;">${s.teamCount} team${s.teamCount !== 1 ? 's' : ''} joined — waiting to start</p>
+          <div class="team-grid" id="lobby-teams">
+            ${s.leaderboard?.map(t => `<div class="team-chip">${t.name}</div>`).join('') || ''}
+          </div>
+        </div>`;
+        controls.innerHTML = `<button class="ctrl-btn primary" onclick="hostControl('start')" ${s.teamCount === 0 ? 'disabled' : ''}>Start Quiz &#x25B6;</button>
+          <button class="ctrl-btn secondary" onclick="hostControl('reset')">Reset</button>`;
+
+      } else if (s.phase === 'question' || s.phase === 'revealed') {
+        const q = s.question;
+        if (!q) return;
+        const keys = ['A','B','C','D'];
+        const revealed = s.phase === 'revealed';
+        const answeredCount = s.leaderboard?.filter(t => t.answered > s.currentQuestion).length || 0;
+
+        body.innerHTML = `
+          <div class="h-main">
+            <div class="h-category">${q.category}</div>
+            <div class="h-question">${q.text}</div>
+            <div class="h-options">
+              ${q.options.map((o,i) => {
+                let cls = 'h-opt';
+                if (revealed && i === q.correct) cls += ' correct';
+                else if (revealed) cls += ' wrong';
+                return `<div class="${cls}"><span class="key">${keys[i]}</span><span>${o}</span></div>`;
+              }).join('')}
+            </div>
+            <div class="h-explanation ${revealed ? 'show' : ''}" id="h-expl">${revealed ? q.explanation : ''}</div>
+          </div>
+          <div class="h-sidebar">
+            <div class="lb-title">Leaderboard</div>
+            <div class="lb-list">
+              ${s.leaderboard?.map((t,i) => `<div class="lb-team"><span class="lb-rank">${i+1}</span><span class="lb-name">${t.name}</span><span class="lb-pts">${t.score}</span></div>`).join('') || ''}
+            </div>
+            <div class="lb-answered">${answeredCount}/${s.teamCount} answered</div>
+          </div>`;
+
+        if (s.phase === 'question') {
+          controls.innerHTML = `<button class="ctrl-btn primary" onclick="hostControl('reveal')">Reveal Answer &#x2728;</button>`;
+        } else {
+          const isLast = s.currentQuestion >= s.totalQuestions - 1;
+          controls.innerHTML = `<button class="ctrl-btn primary" onclick="hostControl('next')">${isLast ? 'Show Results &#x1F3C6;' : 'Next Question &#x2192;'}</button>`;
+        }
+
+      } else if (s.phase === 'results') {
+        const top3 = s.leaderboard?.slice(0, 3) || [];
+        const colors = ['var(--lava)', 'var(--indigo)', 'var(--teal)'];
+        const heights = [200, 150, 120];
+        const places = ['&#x1F947; 1st', '&#x1F948; 2nd', '&#x1F949; 3rd'];
+
+        body.innerHTML = `<div class="h-results">
+          <h1>&#x1F389; Final Results</h1>
+          <div class="podium">
+            ${top3.map((t,i) => `<div class="podium-item">
+              <div class="podium-name">${t.name}</div>
+              <div class="podium-bar" style="height:${heights[i]}px;background:${colors[i]};">${t.score}</div>
+              <div class="podium-place">${places[i]}</div>
+            </div>`).join('')}
+          </div>
+          <div class="lb-list" style="max-width:400px;width:100%;margin-top:1rem;">
+            ${s.leaderboard?.map((t,i) => `<div class="lb-team"><span class="lb-rank">${i+1}</span><span class="lb-name">${t.name}</span><span class="lb-pts">${t.score}</span></div>`).join('') || ''}
+          </div>
+        </div>`;
+        controls.innerHTML = `<button class="ctrl-btn primary" onclick="hostControl('start')">Play Again &#x1F504;</button>
+          <button class="ctrl-btn secondary" onclick="hostControl('reset')">Back to Lobby</button>`;
+      }
+    }
+
+    async function hostControl(action) {
+      try {
+        const res = await fetch(`/api/control/${action}`, {method: 'POST'});
+        state = await res.json();
+        renderHost();
+      } catch (e) { alert('Error: ' + e.message); }
+    }
+
+    /* Update join screen team count */
+    setInterval(async () => {
+      if (mode) return;
+      try {
+        const res = await fetch('/api/state');
+        const data = await res.json();
+        $('join-team-count').textContent = data.teamCount > 0 ? `${data.teamCount} team${data.teamCount !== 1 ? 's' : ''} already in` : '';
+      } catch (e) {}
+    }, 2000);
+  </script>
+</body>
+</html>
