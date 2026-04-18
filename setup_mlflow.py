@@ -46,19 +46,26 @@ settings["env"]["OTEL_EXPORTER_OTLP_ENDPOINT"] = ""
 # Only register the Stop hook when explicitly enabled
 if tracing_enabled:
     app_dir = os.path.dirname(os.path.abspath(__file__))
-    # Bound the handler so a stall in transcript processing can't hang the
-    # whole Stop-hook chain (brain-push, crystallize-nudge, /til). 15s is
-    # generous for a transcript flush; if it's still running past that,
-    # we'd rather drop that one trace than block session close.
+    # Delegate to a proper hook script that backgrounds the handler via
+    # `nohup timeout 30 ... & disown`. This:
+    #   1. unblocks the Stop chain immediately (brain-push, /til, etc.)
+    #   2. caps the backgrounded flush at 30s so a stuck handler can't
+    #      eat memory/CPU forever — one dropped trace beats a leaked
+    #      transcript processor
+    hook_script = os.path.join(
+        app_dir,
+        "coda-marketplace", "plugins", "coda-essentials", "hooks",
+        "mlflow-trace-stop.sh",
+    )
+    os.chmod(hook_script, 0o755)
     mlflow_hook = {
         "hooks": [
             {
                 "type": "command",
-                "command": (
-                    f'uv run --project "{app_dir}" python -c '
-                    '"from mlflow.claude_code.hooks import stop_hook_handler; stop_hook_handler()"'
-                ),
-                "timeout": 15,
+                "command": f"bash {hook_script}",
+                # The wrapper script backgrounds the work and returns in <1s,
+                # so this outer timeout is belt-and-braces only.
+                "timeout": 5,
             }
         ]
     }
