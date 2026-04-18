@@ -10,6 +10,14 @@ env:
     value: databricks-claude-opus-4-6
   - name: GEMINI_MODEL
     value: databricks-gemini-3-1-pro
+  - name: HERMES_MODEL
+    value: databricks-claude-opus-4-7
+  - name: HERMES_FALLBACK_MODEL
+    value: databricks-claude-opus-4-6
+  # Set ENABLE_HERMES=false to skip Hermes Agent install (saves ~180 MB / ~90 s
+  # at container start). Other CLIs are unaffected.
+  - name: ENABLE_HERMES
+    value: "true"
   #OPTIONAL: Use the new Databricks AI Gateway if you have access (recommended), otherwise it will default to the older endpoint
   - name: DATABRICKS_GATEWAY_HOST
     value: https://<your-gateway-id>.ai-gateway.<env>.cloud.databricks.com

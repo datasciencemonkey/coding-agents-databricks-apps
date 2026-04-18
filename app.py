@@ -110,6 +110,7 @@ setup_state = {
         {"id": "codex",      "label": "Configuring Codex CLI",        "status": "pending", "started_at": None, "completed_at": None, "error": None},
         {"id": "opencode",   "label": "Configuring OpenCode CLI",     "status": "pending", "started_at": None, "completed_at": None, "error": None},
         {"id": "gemini",     "label": "Configuring Gemini CLI",       "status": "pending", "started_at": None, "completed_at": None, "error": None},
+        {"id": "hermes",     "label": "Configuring Hermes Agent",     "status": "pending", "started_at": None, "completed_at": None, "error": None},
         {"id": "databricks", "label": "Setting up Databricks CLI",    "status": "pending", "started_at": None, "completed_at": None, "error": None},
         {"id": "mlflow",     "label": "Enabling MLflow tracing",       "status": "pending", "started_at": None, "completed_at": None, "error": None},
     ]
@@ -317,7 +318,7 @@ def _configure_all_cli_auth(token):
     # 3. Re-run Codex, OpenCode, Gemini setup scripts with token in env
     #    They are idempotent: detect CLI already installed, just write config files
     env = {**os.environ, "DATABRICKS_TOKEN": token}
-    for script in ["setup_codex.py", "setup_opencode.py", "setup_gemini.py"]:
+    for script in ["setup_codex.py", "setup_opencode.py", "setup_gemini.py", "setup_hermes.py"]:
         try:
             result = subprocess.run(
                 ["uv", "run", "python", script],
@@ -368,6 +369,7 @@ def run_setup():
         ("codex",      ["uv", "run", "python", "setup_codex.py"]),
         ("opencode",   ["uv", "run", "python", "setup_opencode.py"]),
         ("gemini",     ["uv", "run", "python", "setup_gemini.py"]),
+        ("hermes",     ["uv", "run", "python", "setup_hermes.py"]),
         ("databricks", ["uv", "run", "python", "setup_databricks.py"]),
         ("mlflow",     ["uv", "run", "python", "setup_mlflow.py"]),
     ]
