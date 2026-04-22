@@ -5,19 +5,11 @@ Hermes Agent (github.com/NousResearch/hermes-agent) is a multi-provider AI CLI
 with tool-calling, persistent memory, slash commands, and a rich skill system.
 
 Unlike the other CLIs in CoDA, Hermes is a Python application (not npm).
-This script performs a LEAN install (bypassing the upstream installer's
-`.[all]` extras, which pull ~500 MB / 90+ packages) by cloning the repo
-and installing only the extras CoDA actually needs:
+This script installs from PyPI with minimal deps (core covers chat +
+Databricks model serving). The upstream `.[all]` extras pull ~500 MB /
+90+ packages — users can add specific extras later if needed:
 
-    [mcp, messaging, matrix, web, acp]    # ~180 MB, ~90 s on Databricks Apps
-
-This covers Hermes's three CoDA-required capabilities:
-  1. Self-improvement via MCP (deepwiki, exa)
-  2. Pre-wired Databricks Model Serving (core dep — no extra needed)
-  3. Open path for messaging (WhatsApp / Slack / Teams / Matrix / Discord)
-
-Users can add more later via `uv pip install -e ".[voice,rl,feishu,...]"`
-inside ~/.hermes/hermes-agent, or via `hermes setup` / `hermes mcp add`.
+    uv pip install "hermes-agent[mcp,messaging,...]"
 
 Config: ~/.hermes/config.yaml with custom provider for Databricks.
 Auth:   Bearer token via Databricks PAT.
@@ -52,16 +44,12 @@ hermes_model = os.environ.get("HERMES_MODEL", "databricks-claude-opus-4-7")
 hermes_fallback_model = os.environ.get("HERMES_FALLBACK_MODEL", "databricks-claude-opus-4-6")
 
 hermes_home = home / ".hermes"
-hermes_install_dir = hermes_home / "hermes-agent"
-hermes_venv = hermes_install_dir / "venv"
-hermes_venv_bin = hermes_venv / "bin" / "hermes"
 hermes_bin = home / ".local" / "bin" / "hermes"
 
-# Lean extras — covers MCP (self-improvement), messaging paths (WhatsApp/Slack/
-# Teams via matrix bridges), and ACP (agent-to-agent protocol). Excludes voice,
-# rl, feishu, dingtalk, bedrock, mistral, modal, daytona — users opt in later.
-HERMES_EXTRAS = "mcp,messaging,matrix,web,acp"
-HERMES_REPO = "https://github.com/NousResearch/hermes-agent.git"
+# Minimal install from git — core deps (openai, anthropic, prompt_toolkit, rich,
+# httpx, pyyaml, pydantic) cover chat + Databricks model serving. Not on PyPI,
+# so we install directly from GitHub. uv tool install handles venv + binary.
+HERMES_PKG = "hermes-agent @ git+https://github.com/NousResearch/hermes-agent.git"
 
 # 1. Install Hermes Agent (always, even without token).
 local_bin = home / ".local" / "bin"
@@ -75,74 +63,30 @@ def _run(cmd, **kwargs):
     return result.returncode, result.stdout, result.stderr
 
 
-if not hermes_bin.exists() or not hermes_venv_bin.exists():
-    print(f"Installing Hermes Agent (lean extras: [{HERMES_EXTRAS}])...")
+if not hermes_bin.exists():
+    print("Installing Hermes Agent from PyPI (minimal)...")
 
-    # 1a. Clone (or update) the repo.
-    if not hermes_install_dir.exists():
-        rc, _, err = _run(
-            ["git", "clone", "--depth", "1", HERMES_REPO, str(hermes_install_dir)],
-            timeout=180,
-        )
-        if rc != 0:
-            print(f"Hermes git clone failed (rc={rc}): {err[-600:]}")
-            raise SystemExit(0)  # soft-fail — don't crash app startup
-    else:
-        # Best-effort pull; ignore failures (detached HEAD, local edits, etc.)
-        _run(["git", "-C", str(hermes_install_dir), "pull", "--ff-only"], timeout=60)
-
-    # 1b. Create venv with uv.
-    if not hermes_venv.exists():
-        rc, _, err = _run(
-            ["uv", "venv", str(hermes_venv)],
-            timeout=120,
-        )
-        if rc != 0:
-            print(f"Hermes venv create failed (rc={rc}): {err[-600:]}")
-            raise SystemExit(0)
-
-    # 1c. Install with lean extras using uv (fast + respects pyproject extras).
-    install_env = {
-        **os.environ,
-        "VIRTUAL_ENV": str(hermes_venv),
-        "PATH": f"{hermes_venv / 'bin'}:{os.environ.get('PATH', '')}",
-    }
     rc, _, err = _run(
-        ["uv", "pip", "install", "-e", f".[{HERMES_EXTRAS}]"],
-        cwd=str(hermes_install_dir),
-        env=install_env,
+        ["uv", "tool", "install", HERMES_PKG],
         timeout=600,
     )
     if rc != 0:
-        # Fall back to bare install so `hermes` at least launches.
-        print(f"Hermes lean install failed (rc={rc}), falling back to base: {err[-400:]}")
-        rc, _, err = _run(
-            ["uv", "pip", "install", "-e", "."],
-            cwd=str(hermes_install_dir),
-            env=install_env,
-            timeout=600,
-        )
-        if rc != 0:
-            print(f"Hermes base install also failed (rc={rc}): {err[-600:]}")
-            raise SystemExit(0)
+        print(f"Hermes install failed (rc={rc}): {err[-600:]}")
+        raise SystemExit(0)
 
-    # 1d. Symlink launcher into ~/.local/bin/hermes.
-    if hermes_venv_bin.exists():
-        if hermes_bin.exists() or hermes_bin.is_symlink():
-            hermes_bin.unlink()
-        hermes_bin.symlink_to(hermes_venv_bin)
-        print(f"Hermes Agent installed -> {hermes_bin} -> {hermes_venv_bin}")
+    if hermes_bin.exists():
+        print(f"Hermes Agent installed at {hermes_bin}")
     else:
-        print(f"Warning: expected venv binary missing: {hermes_venv_bin}")
+        print(f"Warning: uv tool install succeeded but {hermes_bin} not found")
 else:
     print(f"Hermes Agent already installed at {hermes_bin}")
 
-# 1e. Pre-create standard Hermes runtime dirs so first run doesn't race on mkdir.
+# 2. Pre-create standard Hermes runtime dirs so first run doesn't race on mkdir.
 for sub in ("sessions", "logs", "memories", "skills", "cron", "pairing",
             "hooks", "image_cache", "audio_cache"):
     (hermes_home / sub).mkdir(parents=True, exist_ok=True)
 
-# 2. Skip auth config if no token (will be configured after PAT setup)
+# 3. Skip auth config if no token (will be configured after PAT setup)
 if not host or not token:
     print("Hermes Agent installed — config will be set after PAT setup")
     raise SystemExit(0)
@@ -165,7 +109,7 @@ else:
     auth_token = token
     print(f"Using Databricks Host: {host}")
 
-# 3. Write ~/.hermes/config.yaml
+# 4. Write ~/.hermes/config.yaml
 config_path = hermes_home / "config.yaml"
 
 claude_skills_dir = Path("/app/python/source_code/.claude/skills")
@@ -244,7 +188,7 @@ if should_write:
     config_path.write_text("\n".join(lines))
     print(f"Hermes config written: {config_path}")
 
-# 4. Adapt CLAUDE.md -> ~/.hermes/HERMES.md for first-run context
+# 5. Adapt CLAUDE.md -> ~/.hermes/HERMES.md for first-run context
 claude_md_locations = [
     Path(__file__).parent / "CLAUDE.md",
     home / ".claude" / "CLAUDE.md",
@@ -265,7 +209,7 @@ adapt_instructions_file(
     cli_name="Hermes",
 )
 
-# 5. Create projects directory (parity with other agents)
+# 6. Create projects directory (parity with other agents)
 projects_dir = home / "projects"
 projects_dir.mkdir(exist_ok=True)
 
@@ -278,5 +222,5 @@ print("  hermes mcp add <name> <url>    # Add MCP server")
 print(f"\nEndpoint:       {base_url}")
 print(f"Primary model:  {hermes_model}")
 print(f"Fallback model: {hermes_fallback_model} (auto-activates on 429/529/503)")
-print(f"Extras:         [{HERMES_EXTRAS}]  (add more: uv pip install -e \".[voice,...]\")")
+print(f"Install:        minimal  (add extras: uv pip install \"hermes-agent[mcp,messaging,...]\")")
 print("Auth:           Bearer token (Databricks PAT)")
