@@ -381,6 +381,18 @@ def run_setup():
         ]
         wait(futures)
 
+    # Sync latest token into all CLI configs — covers the race where PAT
+    # rotation happened while a setup script was still installing (the
+    # rotation's update_cli_tokens() call silently skips missing config files).
+    current_token = os.environ.get("DATABRICKS_TOKEN", "")
+    if current_token:
+        try:
+            from cli_auth import update_cli_tokens
+            update_cli_tokens(current_token)
+            logger.info("Post-setup token sync: all CLI configs updated with current token")
+        except Exception as e:
+            logger.warning(f"Post-setup token sync failed: {e}")
+
     with setup_lock:
         any_error = any(s["status"] == "error" for s in setup_state["steps"])
         setup_state["status"] = "error" if any_error else "complete"
