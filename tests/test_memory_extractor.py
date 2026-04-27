@@ -6,7 +6,6 @@ parsing logic that runs before Haiku is even invoked.
 """
 
 import json
-import os
 from unittest import mock
 
 
