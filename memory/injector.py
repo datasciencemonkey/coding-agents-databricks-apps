@@ -57,6 +57,40 @@ def _suspicious_flags(content: str, mem_type: str) -> list[str]:
     return flags
 
 
+def _age_label(created_at: object) -> str:
+    """Compact human-readable age for a memory's created_at timestamp.
+
+    Mirrors what Claude Code's auto-memory harness does for *its* memory
+    files (an injected `<system-reminder>` like "this memory is 7 days old"):
+    gives the model an explicit signal that the memory may be stale, so it
+    can verify against current state rather than trust blindly.
+
+    Accepts a datetime or an ISO 8601 string (load_memories returns the
+    latter). Returns "today", "Nd ago", "Nw ago", "Nmo ago", "Ny ago", or
+    "age unknown" when the input can't be parsed.
+    """
+    ts = created_at
+    if isinstance(ts, str):
+        try:
+            ts = datetime.fromisoformat(ts)
+        except ValueError:
+            return "age unknown"
+    if not isinstance(ts, datetime):
+        return "age unknown"
+    if ts.tzinfo is None:
+        ts = ts.replace(tzinfo=timezone.utc)
+    days = (datetime.now(timezone.utc) - ts).days
+    if days < 1:
+        return "today"
+    if days < 7:
+        return f"{days}d ago"
+    if days < 30:
+        return f"{days // 7}w ago"
+    if days < 365:
+        return f"{days // 30}mo ago"
+    return f"{days // 365}y ago"
+
+
 def _claude_md_path() -> Path:
     """Return the user-global CLAUDE.md path that Claude Code auto-loads."""
     home = Path(os.environ.get("HOME", "/app/python/source_code"))
@@ -80,6 +114,12 @@ def _render_memory_section(memories: list[dict]) -> str:
         "These memories were extracted from past coding sessions and are stored in",
         "Lakebase for durability across app restarts and CODA instances.",
         "",
+        "**Memories are point-in-time observations, not live state.** Claims about",
+        "code, file paths, line numbers, or external resources may be outdated —",
+        "each entry below shows when it was captured. Verify against the current",
+        "state of the codebase before asserting any specific claim from a memory;",
+        "trust what you observe now if it conflicts with what's recalled here.",
+        "",
     ]
     for mem_type, heading in _TYPE_HEADINGS.items():
         items = by_type.get(mem_type, [])
@@ -102,7 +142,8 @@ def _render_memory_section(memories: list[dict]) -> str:
                 if item.get("project_name")
                 else ""
             )
-            rendered.append(f"- {item['content']}{project_tag}")
+            age_tag = f" _({_age_label(item.get('created_at', ''))})_"
+            rendered.append(f"- {item['content']}{project_tag}{age_tag}")
         if not rendered:
             # Whole section was filtered out — skip the heading too rather than
             # leaving a bare heading with no items below it.
